@@ -446,14 +446,14 @@ function SettingsSection({ section }: { section: string }) {
           ) : data?.items?.length ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-border bg-muted/35 text-sm text-muted-foreground">
+                <thead className="whitespace-nowrap border-b border-border bg-muted/35 text-sm text-muted-foreground">
                   <tr>
                     {config.columns.map((c) => (
-                      <th key={c.key} className="px-5 py-3 font-medium">
+                      <th key={c.key} className="px-3 py-3 font-medium">
                         {c.label}
                       </th>
                     ))}
-                    <th className="px-5 py-3 text-right font-medium">操作</th>
+                    <th className="px-3 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -464,7 +464,7 @@ function SettingsSection({ section }: { section: string }) {
                         {config.columns.map((c) => (
                           <td
                             key={c.key}
-                            className={c.key === "lastError" ? "min-w-56 max-w-md whitespace-normal break-words px-5 py-4 text-red-700" : c.key === "id" && section === "runtimeMachines" ? "min-w-96 px-5 py-4" : "max-w-64 truncate px-5 py-4"}
+                            className={c.key === "lastError" ? "min-w-56 max-w-md whitespace-normal break-words px-3 py-4 text-red-700" : c.key === "id" && section === "runtimeMachines" ? "min-w-96 px-3 py-4" : "max-w-64 truncate px-3 py-4"}
                           >
                             {section === "policies" && c.key === "notificationEnabled" ? (r.notificationEnabled === false ? "关闭" : "开启") : section === "policies" && c.key === "scope" ? (
                               r.kind === "create_task" ? `${channels?.items?.find(channel => channel.id === r.channelId)?.name || "渠道已移除"} → ${repos?.items?.find(repo => repo.id === r.repositoryId)?.name || "仓库已移除"}` : r.kind === "reply_send" ? (Array.isArray(r.channelIds) && r.channelIds.length ? r.channelIds.map(id => channels?.items?.find(channel => channel.id === id)?.name || "渠道已移除").join("、") : "全部渠道") : r.kind === "knowledge_publish" ? "全部知识" : (Array.isArray(r.repositoryIds) && r.repositoryIds.length ? r.repositoryIds.map(id => repos?.items?.find(repo => repo.id === id)?.name || "仓库已移除").join("、") : "全部仓库")
@@ -519,7 +519,7 @@ function SettingsSection({ section }: { section: string }) {
                             )}
                           </td>
                         ))}
-                        <td className="px-5 py-3">
+                        <td className="px-3 py-3">
                           <div className="flex justify-end gap-1">
                             {section === "connections" && (
                               <Button
