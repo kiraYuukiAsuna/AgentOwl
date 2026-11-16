@@ -1,0 +1,15 @@
+# Backend/Controller builds use the repository root as their context.
+# Keep deployment credentials, runtime data, frontend dependencies and caches out.
+*
+!backend/
+!backend/**
+!deploy/
+deploy/*
+!deploy/backend.Dockerfile
+!deploy/runner.Dockerfile
+**/.env
+**/.env.*
+**/.cache
+**/node_modules
+**/bin
+**/*.test

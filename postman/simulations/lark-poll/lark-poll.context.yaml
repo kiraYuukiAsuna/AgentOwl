@@ -1,0 +1,16 @@
+purpose:
+  stands_in_for: Feishu token and chat history endpoints.
+  unblocks: Verify that scheduled history synchronization reaches a local HTTP provider and persists messages.
+assumptions:
+  - id: chat-history
+    status: supported
+    claim: A tenant token and paginated chat message history can be retrieved using the existing history client.
+    reason: This fixture models a single synthetic message and does not establish production permission or provider behavior.
+    verification: On 2026-10-29 TestLarkPollPostmanSimulation passed against the local fixture and temporary PostgreSQL. The token POST and chat-history GET returned 200 and one message was persisted; the real provider was not contacted.
+    source: backend/internal/integration/lark.go
+    updated_at: "2026-10-29"
+fingerprints:
+  - id: agentowl-local
+    date: "2026-10-29"
+    commit: null
+    cli: "1.73.0"

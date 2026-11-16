@@ -1,0 +1,6 @@
+simulation: github-poll
+routing: path
+mocks:
+  - name: GitHub issue polling
+    routeKey: github
+    path: postman/mocks/github-issues/config.yaml

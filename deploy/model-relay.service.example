@@ -1,0 +1,17 @@
+[Unit]
+Description=AgentOwl host model relay
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# Replace the user, project path and bridge address with those on the host.
+User=YOUR_USER
+ExecStart=/usr/bin/python3 /path/to/AgentOwl/deploy/model-relay.py --listen-host 172.17.0.1 --listen-port 18317 --target-port 8317
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

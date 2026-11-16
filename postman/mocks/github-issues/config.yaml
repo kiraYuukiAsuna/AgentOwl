@@ -1,0 +1,10 @@
+version: 1
+name: AgentOwl GitHub issue polling
+slug: agentowl-github-poll
+protocol: http
+port: 4501
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

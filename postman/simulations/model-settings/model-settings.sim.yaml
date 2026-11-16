@@ -1,0 +1,6 @@
+simulation: model-settings
+routing: path
+mocks:
+  - name: OpenAI-compatible classification
+    routeKey: model
+    path: postman/mocks/openai-compatible/config.yaml

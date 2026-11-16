@@ -1,0 +1,47 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.7-bookworm
+        env:
+          POSTGRES_DB: agentowl_test
+          POSTGRES_USER: agentowl_test
+          POSTGRES_PASSWORD: local-ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agentowl_test -d agentowl_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      AGENTOWL_TEST_DATABASE_URL: postgres://agentowl_test:local-ci-only@127.0.0.1:5432/agentowl_test?sslmode=disable
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install pinned Kiota
+        run: dotnet tool install Microsoft.OpenApi.Kiota --version 1.36.1 --tool-path .cache/tools
+      - name: Install dependencies
+        run: make bootstrap
+      - name: Validate implementation and generated artifacts
+        run: make ci

@@ -1,0 +1,16 @@
+purpose:
+  stands_in_for: Feishu token and history endpoints when the bot is outside a chat.
+  unblocks: Verify error details are stored in a failed sync job without sending real requests.
+assumptions:
+  - id: bot-outside-chat
+    status: supported
+    claim: Chat history responds with HTTP 400 and code 230002 when the bot is not in the group.
+    reason: The official history endpoint documents this error and the same response was observed in a read-only diagnostic on 2026-10-29.
+    verification: On 2026-10-29 TestPlatformErrorPostmanSimulation passed with the local fixture and isolated PostgreSQL; the saved job error includes HTTP 400, code 230002, the message and synthetic log ID.
+    source: https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message/list
+    updated_at: "2026-10-29"
+fingerprints:
+  - id: agentowl-local
+    date: "2026-10-29"
+    commit: null
+    cli: "1.73.0"

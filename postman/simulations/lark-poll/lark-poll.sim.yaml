@@ -1,0 +1,6 @@
+simulation: lark-poll
+routing: path
+mocks:
+  - name: Feishu history
+    routeKey: lark
+    path: postman/mocks/lark-history/config.yaml

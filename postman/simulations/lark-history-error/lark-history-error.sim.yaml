@@ -1,0 +1,6 @@
+simulation: lark-history-error
+routing: path
+mocks:
+  - name: Feishu history permission failure
+    routeKey: lark
+    path: postman/mocks/lark-history-error/config.yaml

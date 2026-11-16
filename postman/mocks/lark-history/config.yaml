@@ -1,0 +1,10 @@
+version: 1
+name: AgentOwl Feishu history
+slug: agentowl-lark-history
+protocol: http
+port: 4502
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

@@ -1,0 +1,177 @@
+name: agentowl
+
+x-backend: &backend
+  build:
+    context: ..
+    dockerfile: deploy/backend.Dockerfile
+    args:
+      GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+  image: agentowl-backend:0.1.0
+  user: "${APP_UID:-1000}:${APP_GID:-1000}"
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:rw,nosuid,nodev,size=128m"]
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+x-config: &config
+  DATABASE_URL_FILE: /run/secrets/database_url
+  ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
+  DATA_DIR: /data
+  PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+  AUTH_MODE: ${AUTH_MODE:-local}
+  BOOTSTRAP_EMAIL: ${BOOTSTRAP_EMAIL:-admin@localhost}
+  BOOTSTRAP_NAME: ${BOOTSTRAP_NAME:-Administrator}
+  BOOTSTRAP_SUBJECT: ${BOOTSTRAP_SUBJECT:-}
+  OIDC_ISSUER: ${OIDC_ISSUER:-}
+  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+  REDIS_URL: redis://redis:6379/0
+
+services:
+  postgres:
+    image: postgres:17.7-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agentowl}
+      POSTGRES_USER: ${POSTGRES_USER:-agentowl}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./data/secrets/postgres_password:/run/secrets/postgres_password:ro
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  redis:
+    image: redis:7.4.7-alpine
+    user: "999:999"
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "no", --save, "", --maxmemory, 128mb, --maxmemory-policy, allkeys-lru]
+    networks: [database]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/data:rw,nosuid,nodev,size=16m,mode=1777"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: [/app/migrate]
+    environment: *config
+    volumes:
+      - ./data/secrets/database_url:/run/secrets/database_url:ro
+      - ./data/secrets/encryption_key:/run/secrets/encryption_key:ro
+      - ./data/secrets/oidc_client_secret:/run/secrets/oidc_client_secret:ro
+    networks: [database]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *backend
+    command: [/app/api]
+    environment:
+      <<: *config
+      LISTEN_ADDR: ":8080"
+      INTERNAL_LISTEN_ADDR: ":8081"
+      BOOTSTRAP_PASSWORD_FILE: /run/secrets/bootstrap_password
+      BOOTSTRAP_RUNTIME_MACHINE_ID: ${RUNNER_MACHINE_ID:-}
+      RUNNER_SERVICE_TOKEN_FILE: /run/secrets/runner_service_token
+      RUNNER_CALLBACK_TOKEN_FILE: /run/secrets/runner_callback_token
+    ports: ["127.0.0.1:${API_PORT:-8080}:8080"]
+    volumes:
+      - ./data/artifacts:/data/artifacts:ro
+      - ./data/secrets/database_url:/run/secrets/database_url:ro
+      - ./data/secrets/encryption_key:/run/secrets/encryption_key:ro
+      - ./data/secrets/bootstrap_password:/run/secrets/bootstrap_password:ro
+      - ./data/secrets/runner_service_token:/run/secrets/runner_service_token:ro
+      - ./data/secrets/runner_callback_token:/run/secrets/runner_callback_token:ro
+      - ./data/secrets/oidc_client_secret:/run/secrets/oidc_client_secret:ro
+    networks: [app, database, runner-control]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    <<: *backend
+    command: [/app/worker]
+    environment:
+      <<: *config
+    volumes:
+      - ./data/artifacts:/data/artifacts
+      - ./data/workspaces:/data/workspaces
+      - ./data/secrets/database_url:/run/secrets/database_url:ro
+      - ./data/secrets/encryption_key:/run/secrets/encryption_key:ro
+      - ./data/secrets/oidc_client_secret:/run/secrets/oidc_client_secret:ro
+    networks: [egress, database, runner-control]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrate: {condition: service_completed_successfully}
+
+  web:
+    build:
+      context: ../Frontend
+      args:
+        API_INTERNAL_URL: http://api:8080
+    image: agentowl-web:0.1.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
+    networks: [app]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=64m"]
+    depends_on: [api]
+
+  runner-controller:
+    profiles: [runner]
+    build:
+      context: ..
+      dockerfile: deploy/runner.Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    image: agentowl-runner-controller:0.1.0
+    user: "${RUNNER_UID:-1000}:${RUNNER_GID:-1000}"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      RUNNER_ADDR: ":8090"
+      RUNNER_DATA_ROOT: /runner
+      RUNNER_HOST_DATA_ROOT: ${RUNNER_HOST_DATA_ROOT:-}
+      RUNNER_DOCKER_SOCKET: /runner/control/docker.sock
+      RUNNER_ALLOWED_IMAGES: ${RUNNER_ALLOWED_IMAGES:-}
+      RUNNER_API_URL: http://api:8081
+      RUNNER_MACHINE_ID: ${RUNNER_MACHINE_ID:-}
+      RUNNER_SERVICE_TOKEN_FILE: /run/secrets/runner_service_token
+      RUNNER_CALLBACK_TOKEN_FILE: /run/secrets/runner_callback_token
+    volumes:
+      - ./data/runner:/runner
+      - ./data/secrets/runner_service_token:/run/secrets/runner_service_token:ro
+      - ./data/secrets/runner_callback_token:/run/secrets/runner_callback_token:ro
+    networks: [runner-control, egress]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=32m"]
+    depends_on: [api]
+
+networks:
+  app: {}
+  database: {internal: true}
+  runner-control: {internal: true}
+  egress: {}

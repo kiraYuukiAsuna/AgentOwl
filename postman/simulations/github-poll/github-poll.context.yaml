@@ -1,0 +1,16 @@
+purpose:
+  stands_in_for: GitHub REST endpoints for repository Issues and Issue comments.
+  unblocks: Exercise AgentOwl polling, pagination parameters and database event persistence without accessing a real repository.
+assumptions:
+  - id: issue-and-comment-since
+    status: supported
+    claim: Both list endpoints accept since and page/per_page and return records updated after the timestamp.
+    reason: GitHub documents these parameters for repository issues and issue comments. The local fixture models one issue and one comment, not production availability or ordering under concurrent writes.
+    verification: On 2026-10-29 TestGitHubPollPostmanSimulation passed with the local fixture and isolated PostgreSQL. Both issue-list and comment-list GETs appeared in the simulation log with HTTP 200 and since/per_page parameters; two events were persisted. The real provider was not contacted.
+    source: https://docs.github.com/en/rest/issues/issues; https://docs.github.com/en/rest/issues/comments; backend/internal/service/github_poll.go
+    updated_at: "2026-10-29"
+fingerprints:
+  - id: agentowl-local
+    date: "2026-10-29"
+    commit: null
+    cli: "1.73.0"
