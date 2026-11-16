@@ -467,7 +467,23 @@ func (s *Service) ingestCard(ctx context.Context, tx pgx.Tx, provider, connector
 		_, e = s.Decide(ctx, tx, a, Str(action, "approval_id"), action)
 	case "claim", "takeover", "resume":
 		action["action"] = name
-		_, e = s.CaseAction(ctx, tx, a, Str(action, "case_id"), action)
+		var current Data
+		current, e = s.CaseAction(ctx, tx, a, Str(action, "case_id"), action)
+		if e == nil && name == "claim" && len(Object(actions, "send_reply")) > 0 {
+			// Only advance the case version for this checked claim; the draft version stays frozen.
+			Object(actions, "send_reply")["case_version"] = Num(current, "version")
+			_, e = tx.Exec(ctx, "UPDATE external_operations SET request=$2 WHERE id=$1", Str(op, "id"), JSON(req))
+		}
+	case "send_reply":
+		var approval Data
+		approval, e = s.SubmitReply(ctx, tx, a, Str(action, "reply_id"), action)
+		if e == nil {
+			_, e = s.Decide(ctx, tx, a, Str(approval, "id"), Data{"expected_version": Num(approval, "version"), "decision": "approve"})
+		}
+		if e == nil {
+			req["reply_approval_id"] = Str(approval, "id")
+			_, e = tx.Exec(ctx, "UPDATE external_operations SET request=$2 WHERE id=$1", Str(op, "id"), JSON(req))
+		}
 	case "confirm_development":
 		_, e = s.ConfirmDevelopment(ctx, tx, a, Str(action, "case_id"), action)
 	default:

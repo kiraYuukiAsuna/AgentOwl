@@ -55,6 +55,7 @@ func notificationEnabled(p Data) bool {
 var approvalNotificationLabels = map[string]string{
 	"pending": "待审批", "auto_approved": "已自动批准", "denied": "策略禁止执行",
 	"approved": "审批已通过", "rejected": "审批已拒绝", "revoked": "批准已撤销", "blocked": "任务建议需补充信息",
+	"reply_succeeded": "回复已发送", "reply_failed": "回复未发送", "reply_outcome_unknown": "回复发送结果待核对，请勿重复发送",
 }
 
 func (s *Service) enqueueApprovalNotification(ctx context.Context, tx pgx.Tx, ap Data, event string) error {
@@ -103,6 +104,15 @@ func (s *Service) queueApprovalNotification(ctx context.Context, p Data) error {
 			module = Str(c, "module")
 		}
 		channelID := Str(policy, "notification_channel_id")
+		if strings.HasPrefix(event, "reply_") {
+			origin, e := one(ctx, tx, "SELECT target FROM external_operations WHERE kind='notify' AND status='succeeded' AND request->>'reply_approval_id'=$1 ORDER BY created_at DESC LIMIT 1", Str(ap, "id"))
+			if e != nil && e != NotFound {
+				return e
+			}
+			if e == nil {
+				channelID = Str(origin, "channel_id")
+			}
+		}
 		if channelID == "" {
 			routes, e := many(ctx, tx, `SELECT to_jsonb(c) FROM configs c WHERE kind='owner-routes' AND data->>'enabled'='true' AND data->>'module' IN ($1,'*') ORDER BY (data->>'module'=$1) DESC,id`, module)
 			if e != nil {
@@ -135,6 +145,9 @@ func (s *Service) queueApprovalNotification(ctx context.Context, p Data) error {
 			body += "\n时间：" + at
 		}
 		link := strings.TrimRight(s.Config.PublicURL, "/") + "/approvals/" + Str(ap, "id")
+		if strings.HasPrefix(event, "reply_") && cid != "" {
+			link = strings.TrimRight(s.Config.PublicURL, "/") + "/cases/" + cid
+		}
 		body += "\n" + link
 		actions := Data{}
 		if event == "pending" {
@@ -171,8 +184,18 @@ func (s *Service) approvalNotificationAllowed(ctx context.Context, q DB, op Data
 	if !notificationEnabled(policy) {
 		return false, nil
 	}
-	if channel := Str(policy, "notification_channel_id"); channel != "" && channel != Str(Object(op, "target"), "channel_id") {
+	if channel := Str(policy, "notification_channel_id"); !strings.HasPrefix(Str(r, "approval_event"), "reply_") && channel != "" && channel != Str(Object(op, "target"), "channel_id") {
 		return false, nil
 	}
 	return true, nil
+}
+
+// Reuse approval notification policy and deduplication for the final send outcome.
+func (s *Service) enqueueReplyOutcome(ctx context.Context, tx pgx.Tx, approvalID, status, reason string) error {
+	ap, err := one(ctx, tx, "SELECT to_jsonb(a) FROM approvals a WHERE id=$1", approvalID)
+	if err != nil {
+		return err
+	}
+	ap["reason"] = reason
+	return s.enqueueApprovalNotification(ctx, tx, ap, "reply_"+status)
 }

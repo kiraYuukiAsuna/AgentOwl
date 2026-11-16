@@ -251,6 +251,11 @@ func (s *Service) finishExternal(ctx context.Context, op Data, status string, re
 			return e
 		}
 		req := Object(current, "request")
+		if Str(current, "kind") == "reply_send" {
+			if e = s.enqueueReplyOutcome(ctx, tx, Str(current, "approval_id"), status, message); e != nil {
+				return e
+			}
+		}
 		if Str(current, "kind") == "notify" && status != "succeeded" && Str(req, "case_id") != "" {
 			eventType, body := "notification_failed", "通知发送失败"
 			if status == "outcome_unknown" {

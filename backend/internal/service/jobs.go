@@ -366,6 +366,11 @@ func (s *Service) failJob(ctx context.Context, j Data, cause error) error {
 				if _, e = tx.Exec(ctx, "UPDATE approvals SET status='stale',reason=$2,version=version+1,updated_at=now() WHERE id=$1", Str(ap, "id"), reason); e != nil {
 					return e
 				}
+				if Str(ap, "subject_type") == "reply" {
+					if e = s.enqueueReplyOutcome(ctx, tx, Str(ap, "id"), "failed", reason); e != nil {
+						return e
+					}
+				}
 				action := Object(ap, "action")
 				if Str(ap, "subject_type") == "step" {
 					if _, e = tx.Exec(ctx, "UPDATE task_steps SET status='blocked',error=$2,updated_at=now() WHERE id=$1 AND approval_id=$3", Str(ap, "subject_id"), reason, Str(ap, "id")); e != nil {
@@ -374,6 +379,17 @@ func (s *Service) failJob(ctx context.Context, j Data, cause error) error {
 					if e = taskFact(ctx, tx, Str(action, "task_id"), taskcore.Block, taskcore.Facts{Revision: Num(action, "revision"), Epoch: Num(action, "epoch")}, Data{"error": reason}); e != nil {
 						return e
 					}
+				}
+			}
+		}
+		if Str(j, "kind") == "dispatch_external" {
+			op, e := one(ctx, tx, "SELECT to_jsonb(o) FROM external_operations o WHERE id=$1", Str(p, "operation_id"))
+			if e != nil {
+				return e
+			}
+			if Str(op, "kind") == "reply_send" && Str(op, "status") == "pending" {
+				if e = s.enqueueReplyOutcome(ctx, tx, Str(op, "approval_id"), "failed", reason); e != nil {
+					return e
 				}
 			}
 		}

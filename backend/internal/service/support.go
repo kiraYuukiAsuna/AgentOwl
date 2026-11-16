@@ -388,6 +388,12 @@ func (s *Service) SubmitReply(ctx context.Context, tx pgx.Tx, a Actor, id string
 	if e != nil {
 		return nil, e
 	}
+	if version := Num(b, "case_version"); version > 0 && version != Num(c, "version") {
+		return nil, Conflict
+	}
+	if contains([]string{"closed", "resolved"}, Str(c, "status")) {
+		return nil, Fail(409, "invalid_state", "问题已结束，不能发送回复")
+	}
 	ev, e := s.evidence(ctx, tx, c, Strings(r, "evidence_ids"))
 	if e != nil {
 		return nil, e
@@ -396,7 +402,7 @@ func (s *Service) SubmitReply(ctx context.Context, tx pgx.Tx, a Actor, id string
 	if e != nil {
 		return nil, e
 	}
-	action := Data{"channel_version": Num(channel, "version"), "connector_version": Num(connector, "version"), "reply_id": id, "reply_version": Num(r, "version"), "case_id": Str(c, "id"), "case_version": Num(c, "version"), "channel_id": Str(channel, "id"), "body": Str(r, "body"), "evidence": ev, "manual": true}
+	action := Data{"channel_version": Num(channel, "version"), "connector_id": Str(connector, "id"), "connector_version": Num(connector, "version"), "reply_id": id, "reply_version": Num(r, "version"), "case_id": Str(c, "id"), "case_version": Num(c, "version"), "channel_id": Str(channel, "id"), "body": Str(r, "body"), "evidence": ev, "manual": true}
 	if Bool(channel, "private") {
 		action["private_channel"], action["external_id"], action["private_actor_id"] = true, Str(channel, "external_id"), Str(channel, "private_actor_id")
 	}

@@ -424,7 +424,7 @@ func (s *Service) classifySupport(ctx context.Context, p Data) error {
 			if Bool(p, "historical") {
 				return caseEvent(ctx, tx, Str(c, "id"), "needs_human", "system", failure, Data{"historical": true})
 			}
-			return s.supportHuman(ctx, tx, current, failure)
+			return s.supportHuman(ctx, tx, current, failure, "")
 		}
 		module := boundedText(result.Module, 80)
 		result.Reason = integration.Redact(result.Reason)
@@ -457,7 +457,7 @@ func (s *Service) classifySupport(ctx context.Context, p Data) error {
 			if Bool(p, "historical") {
 				return caseEvent(ctx, tx, Str(c, "id"), "needs_human", "system", result.Reason, Data{"historical": true})
 			}
-			return s.supportHuman(ctx, tx, current, "需要开发者进一步判断："+result.Reason)
+			return s.supportHuman(ctx, tx, current, "需要开发者进一步判断："+result.Reason, "")
 		}
 		rid := ID()
 		_, e = tx.Exec(ctx, "INSERT INTO replies(id,case_id,status,author_id,case_version) VALUES($1,$2,'generating','system:model',$3)", rid, Str(c, "id"), Num(current, "version"))
@@ -478,11 +478,21 @@ func classificationFailure(err error) string {
 	return "分类服务暂不可用，已转交人工判断：" + detail
 }
 
-func (s *Service) supportHuman(ctx context.Context, tx pgx.Tx, c Data, reason string) error {
+func (s *Service) supportHuman(ctx context.Context, tx pgx.Tx, c Data, reason, replyID string) error {
 	if e := caseEvent(ctx, tx, Str(c, "id"), "needs_human", "system", reason, Data{}); e != nil {
 		return e
 	}
-	return enqueue(ctx, tx, "notify", "notify:"+Str(c, "id")+":"+strconv.FormatInt(Num(c, "version"), 10), Data{"case_id": Str(c, "id"), "reason": integration.Redact(reason)}, 0)
+	key := "notify:" + Str(c, "id") + ":" + strconv.FormatInt(Num(c, "version"), 10)
+	payload := Data{"case_id": Str(c, "id"), "reason": integration.Redact(reason)}
+	if replyID != "" {
+		reply, err := one(ctx, tx, "SELECT to_jsonb(r) FROM replies r WHERE id=$1 AND case_id=$2", replyID, Str(c, "id"))
+		if err != nil {
+			return err
+		}
+		payload["reply_id"], payload["reply_version"], payload["case_version"] = replyID, Num(reply, "version"), Num(c, "version")
+		key += ":reply:" + replyID + ":" + strconv.FormatInt(Num(reply, "version"), 10)
+	}
+	return enqueue(ctx, tx, "notify", key, payload, 0)
 }
 
 func (s *Service) answerSupport(ctx context.Context, p Data) error {
@@ -637,7 +647,7 @@ func (s *Service) answerSupport(ctx context.Context, p Data) error {
 			if Bool(p, "historical") {
 				return caseEvent(ctx, tx, Str(c, "id"), "needs_human", "system", reason, Data{"historical": true})
 			}
-			return s.supportHuman(ctx, tx, current, reason)
+			return s.supportHuman(ctx, tx, current, reason, "")
 		}
 		knowledgeIDs := []string{}
 		imageRefs := []Data{}
@@ -693,12 +703,15 @@ func (s *Service) answerSupport(ctx context.Context, p Data) error {
 			if Bool(p, "historical") {
 				return caseEvent(ctx, tx, Str(c, "id"), "needs_human", "system", body, Data{"historical": true})
 			}
-			return s.supportHuman(ctx, tx, current, "需要补充信息或人工解答："+body)
+			return s.supportHuman(ctx, tx, current, "需要补充信息或人工解答："+body, Str(r, "id"))
 		}
 		mode := Str(current, "reply_mode")
 		auto := Bool(p, "automatic") && (mode == "auto" || mode == "mentions" && Bool(Object(current, "environment"), "mentioned_bot"))
 		if !auto {
-			return nil
+			if Bool(p, "historical") {
+				return nil
+			}
+			return s.supportHuman(ctx, tx, current, "回复草稿待确认："+body, Str(r, "id"))
 		}
 		ch, co, e := s.caseReplyChannel(ctx, tx, current)
 		if e != nil {
@@ -1138,7 +1151,7 @@ func (s *Service) queueSupportNotification(ctx context.Context, p Data) error {
 		if e != nil {
 			return e
 		}
-		if contains([]string{"closed", "resolved"}, Str(c, "status")) {
+		if contains([]string{"closed", "resolved"}, Str(c, "status")) || Str(p, "reply_id") != "" && Num(p, "case_version") != Num(c, "version") {
 			return nil
 		}
 		stage := fallback(Str(p, "stage"), "initial")
@@ -1192,10 +1205,27 @@ func (s *Service) queueSupportNotification(ctx context.Context, p Data) error {
 		}
 		actions := Data{"claim": Data{"case_id": Str(c, "id"), "expected_version": Num(c, "version")}, "takeover": Data{"case_id": Str(c, "id"), "expected_version": Num(c, "version")}}
 
+		replyID := Str(p, "reply_id")
+		if replyID != "" {
+			reply, err := one(ctx, tx, "SELECT to_jsonb(r) FROM replies r WHERE id=$1 AND case_id=$2", replyID, Str(c, "id"))
+			if err != nil {
+				return err
+			}
+			if Str(reply, "status") != "draft" || Num(reply, "version") != Num(p, "reply_version") {
+				return nil
+			}
+			actions["send_reply"] = Data{"reply_id": replyID, "expected_version": Num(reply, "version"), "case_version": Num(c, "version")}
+		}
 		opID := ID()
 		request := Data{"case_id": Str(c, "id"), "case_version": Num(c, "version"), "body": integration.Redact(body), "card_nonce": Token(), "card_actions": actions}
+		if replyID != "" {
+			request["case_url"] = strings.TrimRight(s.Config.PublicURL, "/") + "/cases/" + Str(c, "id")
+		}
 		target := Data{"channel_id": channelID, "channel_version": Num(ch, "version"), "connector_id": Str(co, "id"), "connector_version": Num(co, "version"), "external_id": Str(ch, "external_id")}
 		key := fmt.Sprintf("notify:%s:%d:%s:%s", Str(c, "id"), Num(c, "version"), stage, Str(p, "approval_id"))
+		if replyID != "" {
+			key += ":reply:" + replyID + ":" + strconv.FormatInt(Num(p, "reply_version"), 10)
+		}
 		var inserted string
 		e = tx.QueryRow(ctx, "INSERT INTO external_operations(id,kind,subject_id,dedupe_key,target,request) VALUES($1,'notify',$2,$3,$4,$5) ON CONFLICT(dedupe_key) DO NOTHING RETURNING id", opID, Str(c, "id"), key, JSON(target), JSON(request)).Scan(&inserted)
 		if errors.Is(e, pgx.ErrNoRows) {
@@ -1332,13 +1362,18 @@ func (s *Service) DispatchMessage(ctx context.Context, op Data) (Data, error) {
 
 func notificationCard(operationID string, request Data) json.RawMessage {
 	buttons := []any{}
-	labels := map[string]string{"claim": "认领", "takeover": "人工接管", "resume": "恢复辅助", "approve": "批准", "reject": "拒绝", "revoke": "撤销批准", "confirm_development": "确认开发"}
+	labels := map[string]string{"claim": "认领", "takeover": "人工接管", "resume": "恢复辅助", "approve": "批准", "reject": "拒绝", "revoke": "撤销批准", "confirm_development": "确认开发", "send_reply": "批准并发送"}
 	actions := Object(request, "card_actions")
-	for _, name := range []string{"claim", "takeover", "resume", "approve", "reject", "revoke", "confirm_development"} {
+	for _, name := range []string{"claim", "takeover", "resume", "approve", "reject", "revoke", "confirm_development", "send_reply"} {
 		if len(Object(actions, name)) == 0 {
 			continue
 		}
 		buttons = append(buttons, Data{"tag": "button", "text": Data{"tag": "plain_text", "content": labels[name]}, "type": "default", "value": Data{"operation_id": operationID, "nonce": Str(request, "card_nonce"), "action": name}})
+	}
+	if link := Str(request, "case_url"); link != "" {
+		buttons = append(buttons, Data{"tag": "button", "text": Data{"tag": "plain_text", "content": "查看草稿"}, "type": "default", "url": link})
+	} else if link := Str(request, "approval_url"); link != "" {
+		buttons = append(buttons, Data{"tag": "button", "text": Data{"tag": "plain_text", "content": "查看详情"}, "type": "default", "url": link})
 	}
 	elements := []any{Data{"tag": "div", "text": Data{"tag": "plain_text", "content": Str(request, "body")}}}
 	if len(buttons) > 0 {
@@ -1348,7 +1383,7 @@ func notificationCard(operationID string, request Data) json.RawMessage {
 }
 
 func notificationResultCard(op Data, action string, duplicate bool) json.RawMessage {
-	labels := map[string]string{"claim": "已认领", "takeover": "已接管", "resume": "已恢复辅助", "approve": "已批准", "reject": "已拒绝", "revoke": "已撤销批准", "confirm_development": "已确认开发"}
+	labels := map[string]string{"claim": "已认领", "takeover": "已接管", "resume": "已恢复辅助", "approve": "已批准", "reject": "已拒绝", "revoke": "已撤销批准", "confirm_development": "已确认开发", "send_reply": "已批准回复并加入发送队列"}
 	note := labels[action]
 	if note == "" {
 		note = "操作已记录"
@@ -1358,10 +1393,11 @@ func notificationResultCard(op Data, action string, duplicate bool) json.RawMess
 	} else {
 		note += "。按钮已停用。"
 	}
-	return JSON(Data{"config": Data{"wide_screen_mode": true}, "elements": []any{
-		Data{"tag": "div", "text": Data{"tag": "plain_text", "content": Str(Object(op, "request"), "body")}},
-		Data{"tag": "note", "elements": []any{Data{"tag": "plain_text", "content": note}}},
-	}})
+	request := Object(op, "request")
+	if action == "claim" && Str(request, "reply_approval_id") == "" && len(Object(Object(request, "card_actions"), "send_reply")) > 0 {
+		return notificationCard(Str(op, "id"), Data{"body": Str(request, "body") + "\n已认领", "card_nonce": Str(request, "card_nonce"), "case_url": Str(request, "case_url"), "card_actions": Data{"send_reply": Object(Object(request, "card_actions"), "send_reply")}})
+	}
+	return notificationCard(Str(op, "id"), Data{"body": Str(request, "body") + "\n" + note, "approval_url": fallback(Str(request, "case_url"), Str(request, "approval_url"))})
 }
 
 func (s *Service) supportCaseActive(ctx context.Context, c Data) (bool, error) {
