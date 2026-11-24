@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -57,5 +58,12 @@ func TestSourceAdapterReadAndUnknownWrite(t *testing.T) {
 				t.Fatal("uncertain write treated as safe retry", e)
 			}
 		})
+	}
+}
+
+func TestLarkMentionPostRender(t *testing.T) {
+	raw := string(renderLarkPostWithMention("ou_user", `<at user_id="ou_user"></at> Answer body`))
+	if !strings.Contains(raw, `"tag":"at"`) || !strings.Contains(raw, `"user_id":"ou_user"`) || strings.Contains(raw, `<at user_id`) {
+		t.Fatalf("post mention render mismatch: %s", raw)
 	}
 }

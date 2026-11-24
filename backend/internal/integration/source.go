@@ -27,6 +27,7 @@ type SourceInbound struct {
 }
 type SourceWrite struct {
 	OperationID, ChannelID, ReplyTo, Body, MessageID, Emoji, SenderID, SenderLogin string
+	MentionUserID                                                                  string
 	Issue                                                                          int
 	ReplyInThread                                                                  bool
 	Card                                                                           json.RawMessage
@@ -50,6 +51,18 @@ func (s GitHubSource) Parse(h http.Header, b []byte) (SourceInbound, error) {
 	in, e := s.Client.ParseWebhook(h, b)
 	return SourceInbound{Event: in.Event, Ignored: in.Ignored}, e
 }
+
+func renderLarkPostWithMention(userID, body string) json.RawMessage {
+	mention := `<at user_id="` + userID + `"></at>`
+	text := strings.TrimSpace(strings.TrimPrefix(body, mention))
+	row := []map[string]string{{"tag": "at", "user_id": userID}, {"tag": "text", "text": " "}}
+	if text != "" {
+		row = append(row, map[string]string{"tag": "md", "text": text})
+	}
+	raw, _ := json.Marshal(map[string]any{"zh_cn": map[string]any{"content": [][]map[string]string{row}}})
+	return raw
+}
+
 func (s LarkSource) Send(ctx context.Context, w SourceWrite) (SourceResult, error) {
 	if w.MessageID != "" {
 		r, e := s.Client.AddReaction(ctx, AddReactionRequest{MessageID: w.MessageID, EmojiType: w.Emoji})
@@ -57,6 +70,10 @@ func (s LarkSource) Send(ctx context.Context, w SourceWrite) (SourceResult, erro
 	}
 	body, _ := json.Marshal(map[string]string{"text": w.Body})
 	kind := "text"
+	if w.MentionUserID != "" {
+		body = renderLarkPostWithMention(w.MentionUserID, w.Body)
+		kind = "post"
+	}
 	if len(w.Card) > 0 {
 		body = w.Card
 		kind = "interactive"

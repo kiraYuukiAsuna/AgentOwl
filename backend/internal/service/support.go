@@ -403,6 +403,17 @@ func (s *Service) SubmitReply(ctx context.Context, tx pgx.Tx, a Actor, id string
 		return nil, e
 	}
 	action := Data{"channel_version": Num(channel, "version"), "connector_id": Str(connector, "id"), "connector_version": Num(connector, "version"), "reply_id": id, "reply_version": Num(r, "version"), "case_id": Str(c, "id"), "case_version": Num(c, "version"), "channel_id": Str(channel, "id"), "body": Str(r, "body"), "evidence": ev, "manual": true}
+	if !Bool(channel, "private") && contains([]string{"feishu", "lark"}, Str(connector, "provider")) {
+		if source := Str(Object(c, "environment"), "last_message_id"); source != "" {
+			m, err := one(ctx, tx, "SELECT to_jsonb(m) FROM source_messages m WHERE connector_id=$1 AND channel_id=$2 AND case_id=$3 AND external_id=$4 AND NOT deleted", Str(connector, "id"), Str(channel, "id"), Str(c, "id"), source)
+			if err != nil && err != NotFound {
+				return nil, err
+			}
+			if err == nil {
+				action["mention_user_id"] = Str(m, "actor_id")
+			}
+		}
+	}
 	if Bool(channel, "private") {
 		action["private_channel"], action["external_id"], action["private_actor_id"] = true, Str(channel, "external_id"), Str(channel, "private_actor_id")
 	}

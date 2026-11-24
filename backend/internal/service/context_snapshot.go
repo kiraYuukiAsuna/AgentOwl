@@ -101,6 +101,7 @@ func (s *Service) freezeContext(ctx context.Context, q DB, t, input Data) error 
 	index := []Data{}
 	references := []Data{}
 	sources := []Data{}
+	sourceContexts := []Data{}
 	for _, row := range rows {
 		entry := Data{"id": Str(row, "id"), "kind": Str(row, "kind"), "digest": Str(row, "digest"), "actor": Object(row, "actor_ref"), "source_version": Num(row, "source_version")}
 		if Str(row, "source_message_id") != "" {
@@ -126,6 +127,12 @@ func (s *Service) freezeContext(ctx context.Context, q DB, t, input Data) error 
 			}
 			entry["actor"] = identity
 			entry["source"] = Data{"connector_id": Str(source, "connector_id"), "channel_id": Str(source, "channel_id"), "thread_id": Str(source, "thread_id"), "message_id": Str(source, "external_id"), "url": Str(source, "source_url")}
+			contextFacts, contextDocs, e := s.sourceContextSnapshot(ctx, q, source)
+			if e != nil {
+				return e
+			}
+			contextFacts["task_input_id"] = Str(row, "id")
+			sourceContexts = append(sourceContexts, Data{"input_id": Str(row, "id"), "facts": contextFacts, "documents": contextDocs})
 		}
 		if Bool(row, "applied") {
 			entry["read_tool"] = "read_task_input"
@@ -145,6 +152,9 @@ func (s *Service) freezeContext(ctx context.Context, q DB, t, input Data) error 
 	}
 	if len(references) > 0 {
 		documents["reference_inputs"] = string(JSON(references))
+	}
+	if len(sourceContexts) > 0 {
+		documents["source_contexts"] = string(JSON(sourceContexts))
 	}
 	results, err := many(ctx, q, `SELECT jsonb_build_object('stage',stage,'summary',output->>'summary') FROM task_steps WHERE task_id=$1 AND revision=$2 AND status='succeeded' ORDER BY created_at,id`, Str(t, "id"), Num(t, "revision"))
 	if err != nil {

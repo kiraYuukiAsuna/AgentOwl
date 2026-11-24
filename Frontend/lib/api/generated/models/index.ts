@@ -841,6 +841,88 @@ export interface ConnectorList extends Parsable {
      */
     total?: number | null;
 }
+export interface ContextManifest extends AdditionalDataHolder, Parsable {
+    /**
+     * The coverage property
+     */
+    coverage?: string | null;
+    /**
+     * The facts property
+     */
+    facts?: ContextManifest_facts | null;
+    /**
+     * The refs property
+     */
+    refs?: ContextRef[] | null;
+    /**
+     * The token_budget property
+     */
+    tokenBudget?: number | null;
+    /**
+     * The version property
+     */
+    version?: number | null;
+}
+export interface ContextManifest_facts extends AdditionalDataHolder, Parsable {
+}
+export interface ContextPage extends AdditionalDataHolder, Parsable {
+    /**
+     * The content_digest property
+     */
+    contentDigest?: string | null;
+    /**
+     * The facts property
+     */
+    facts?: ContextPage_facts | null;
+    /**
+     * The id property
+     */
+    id?: string | null;
+    /**
+     * The next_cursor property
+     */
+    nextCursor?: string | null;
+    /**
+     * The next_tool property
+     */
+    nextTool?: string | null;
+    /**
+     * The offset property
+     */
+    offset?: number | null;
+    /**
+     * The text property
+     */
+    text?: string | null;
+    /**
+     * The total_characters property
+     */
+    totalCharacters?: number | null;
+}
+export interface ContextPage_facts extends AdditionalDataHolder, Parsable {
+}
+export interface ContextRef extends AdditionalDataHolder, Parsable {
+    /**
+     * The content_digest property
+     */
+    contentDigest?: string | null;
+    /**
+     * The estimated_tokens property
+     */
+    estimatedTokens?: number | null;
+    /**
+     * The id property
+     */
+    id?: string | null;
+    /**
+     * The kind property
+     */
+    kind?: string | null;
+    /**
+     * The title property
+     */
+    title?: string | null;
+}
 /**
  * Creates a new instance of the appropriate class based on discriminator value
  * @param parseNode The parse node to use to read the discriminator value and create the object
@@ -1101,6 +1183,51 @@ export function createConnectorFromDiscriminatorValue(parseNode: ParseNode | und
 // @ts-ignore
 export function createConnectorListFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
     return deserializeIntoConnectorList;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {ContextManifest_facts}
+ */
+// @ts-ignore
+export function createContextManifest_factsFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoContextManifest_facts;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {ContextManifest}
+ */
+// @ts-ignore
+export function createContextManifestFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoContextManifest;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {ContextPage_facts}
+ */
+// @ts-ignore
+export function createContextPage_factsFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoContextPage_facts;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {ContextPage}
+ */
+// @ts-ignore
+export function createContextPageFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoContextPage;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {ContextRef}
+ */
+// @ts-ignore
+export function createContextRefFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoContextRef;
 }
 /**
  * Creates a new instance of the appropriate class based on discriminator value
@@ -1641,6 +1768,24 @@ export function createTaskFromDiscriminatorValue(parseNode: ParseNode | undefine
 // @ts-ignore
 export function createTaskInputActionFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
     return deserializeIntoTaskInputAction;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {TaskInputContext_facts}
+ */
+// @ts-ignore
+export function createTaskInputContext_factsFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoTaskInputContext_facts;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {TaskInputContext}
+ */
+// @ts-ignore
+export function createTaskInputContextFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoTaskInputContext;
 }
 /**
  * Creates a new instance of the appropriate class based on discriminator value
@@ -2394,6 +2539,74 @@ export function deserializeIntoConnectorList(connectorList: Partial<ConnectorLis
         "items": n => { connectorList.items = n.getCollectionOfObjectValues<Connector>(createConnectorFromDiscriminatorValue); },
         "next_cursor": n => { connectorList.nextCursor = n.getStringValue(); },
         "total": n => { connectorList.total = n.getNumberValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param ContextManifest The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoContextManifest(contextManifest: Partial<ContextManifest> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "coverage": n => { contextManifest.coverage = n.getStringValue(); },
+        "facts": n => { contextManifest.facts = n.getObjectValue<ContextManifest_facts>(createContextManifest_factsFromDiscriminatorValue); },
+        "refs": n => { contextManifest.refs = n.getCollectionOfObjectValues<ContextRef>(createContextRefFromDiscriminatorValue); },
+        "token_budget": n => { contextManifest.tokenBudget = n.getNumberValue(); },
+        "version": n => { contextManifest.version = n.getNumberValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param ContextManifest_facts The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoContextManifest_facts(contextManifest_facts: Partial<ContextManifest_facts> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param ContextPage The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoContextPage(contextPage: Partial<ContextPage> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "content_digest": n => { contextPage.contentDigest = n.getStringValue(); },
+        "facts": n => { contextPage.facts = n.getObjectValue<ContextPage_facts>(createContextPage_factsFromDiscriminatorValue); },
+        "id": n => { contextPage.id = n.getStringValue(); },
+        "next_cursor": n => { contextPage.nextCursor = n.getStringValue(); },
+        "next_tool": n => { contextPage.nextTool = n.getStringValue(); },
+        "offset": n => { contextPage.offset = n.getNumberValue(); },
+        "text": n => { contextPage.text = n.getStringValue(); },
+        "total_characters": n => { contextPage.totalCharacters = n.getNumberValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param ContextPage_facts The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoContextPage_facts(contextPage_facts: Partial<ContextPage_facts> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param ContextRef The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoContextRef(contextRef: Partial<ContextRef> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "content_digest": n => { contextRef.contentDigest = n.getStringValue(); },
+        "estimated_tokens": n => { contextRef.estimatedTokens = n.getNumberValue(); },
+        "id": n => { contextRef.id = n.getStringValue(); },
+        "kind": n => { contextRef.kind = n.getStringValue(); },
+        "title": n => { contextRef.title = n.getStringValue(); },
     }
 }
 /**
@@ -3439,6 +3652,28 @@ export function deserializeIntoTaskInputAction(taskInputAction: Partial<TaskInpu
     return {
         "action": n => { taskInputAction.action = n.getEnumValue<TaskInputAction_action>(TaskInputAction_actionObject); },
         "expected_version": n => { taskInputAction.expectedVersion = n.getNumberValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param TaskInputContext The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoTaskInputContext(taskInputContext: Partial<TaskInputContext> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "facts": n => { taskInputContext.facts = n.getObjectValue<TaskInputContext_facts>(createTaskInputContext_factsFromDiscriminatorValue); },
+        "manifest": n => { taskInputContext.manifest = n.getObjectValue<ContextManifest>(createContextManifestFromDiscriminatorValue); },
+    }
+}
+/**
+ * The deserialization information for the current model
+ * @param TaskInputContext_facts The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoTaskInputContext_facts(taskInputContext_facts: Partial<TaskInputContext_facts> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
     }
 }
 /**
@@ -5788,6 +6023,79 @@ export function serializeConnectorList(writer: SerializationWriter, connectorLis
 }
 /**
  * Serializes information the current object
+ * @param ContextManifest The instance to serialize from.
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeContextManifest(writer: SerializationWriter, contextManifest: Partial<ContextManifest> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!contextManifest || isSerializingDerivedType) { return; }
+    writer.writeStringValue("coverage", contextManifest.coverage);
+    writer.writeObjectValue<ContextManifest_facts>("facts", contextManifest.facts, serializeContextManifest_facts);
+    writer.writeCollectionOfObjectValues<ContextRef>("refs", contextManifest.refs, serializeContextRef);
+    writer.writeNumberValue("token_budget", contextManifest.tokenBudget);
+    writer.writeNumberValue("version", contextManifest.version);
+    writer.writeAdditionalData(contextManifest.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param ContextManifest_facts The instance to serialize from.
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeContextManifest_facts(writer: SerializationWriter, contextManifest_facts: Partial<ContextManifest_facts> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!contextManifest_facts || isSerializingDerivedType) { return; }
+    writer.writeAdditionalData(contextManifest_facts.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param ContextPage The instance to serialize from.
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeContextPage(writer: SerializationWriter, contextPage: Partial<ContextPage> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!contextPage || isSerializingDerivedType) { return; }
+    writer.writeStringValue("content_digest", contextPage.contentDigest);
+    writer.writeObjectValue<ContextPage_facts>("facts", contextPage.facts, serializeContextPage_facts);
+    writer.writeStringValue("id", contextPage.id);
+    writer.writeStringValue("next_cursor", contextPage.nextCursor);
+    writer.writeStringValue("next_tool", contextPage.nextTool);
+    writer.writeNumberValue("offset", contextPage.offset);
+    writer.writeStringValue("text", contextPage.text);
+    writer.writeNumberValue("total_characters", contextPage.totalCharacters);
+    writer.writeAdditionalData(contextPage.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param ContextPage_facts The instance to serialize from.
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeContextPage_facts(writer: SerializationWriter, contextPage_facts: Partial<ContextPage_facts> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!contextPage_facts || isSerializingDerivedType) { return; }
+    writer.writeAdditionalData(contextPage_facts.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param ContextRef The instance to serialize from.
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeContextRef(writer: SerializationWriter, contextRef: Partial<ContextRef> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!contextRef || isSerializingDerivedType) { return; }
+    writer.writeStringValue("content_digest", contextRef.contentDigest);
+    writer.writeNumberValue("estimated_tokens", contextRef.estimatedTokens);
+    writer.writeStringValue("id", contextRef.id);
+    writer.writeStringValue("kind", contextRef.kind);
+    writer.writeStringValue("title", contextRef.title);
+    writer.writeAdditionalData(contextRef.additionalData);
+}
+/**
+ * Serializes information the current object
  * @param Dashboard The instance to serialize from.
  * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
  * @param writer Serialization writer to use to serialize this model
@@ -6839,6 +7147,30 @@ export function serializeTaskInputAction(writer: SerializationWriter, taskInputA
 /**
  * Serializes information the current object
  * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param TaskInputContext The instance to serialize from.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeTaskInputContext(writer: SerializationWriter, taskInputContext: Partial<TaskInputContext> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!taskInputContext || isSerializingDerivedType) { return; }
+    writer.writeObjectValue<TaskInputContext_facts>("facts", taskInputContext.facts, serializeTaskInputContext_facts);
+    writer.writeObjectValue<ContextManifest>("manifest", taskInputContext.manifest, serializeContextManifest);
+    writer.writeAdditionalData(taskInputContext.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param TaskInputContext_facts The instance to serialize from.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeTaskInputContext_facts(writer: SerializationWriter, taskInputContext_facts: Partial<TaskInputContext_facts> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!taskInputContext_facts || isSerializingDerivedType) { return; }
+    writer.writeAdditionalData(taskInputContext_facts.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
  * @param TaskInputCreate The instance to serialize from.
  * @param writer Serialization writer to use to serialize this model
  */
@@ -7515,6 +7847,18 @@ export interface TaskInputAction extends AdditionalDataHolder, Parsable {
     expectedVersion?: number | null;
 }
 export type TaskInputAction_action = (typeof TaskInputAction_actionObject)[keyof typeof TaskInputAction_actionObject];
+export interface TaskInputContext extends AdditionalDataHolder, Parsable {
+    /**
+     * The facts property
+     */
+    facts?: TaskInputContext_facts | null;
+    /**
+     * The manifest property
+     */
+    manifest?: ContextManifest | null;
+}
+export interface TaskInputContext_facts extends AdditionalDataHolder, Parsable {
+}
 export interface TaskInputCreate extends AdditionalDataHolder, Parsable {
     /**
      * The body property

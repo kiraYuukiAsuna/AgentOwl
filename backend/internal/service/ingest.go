@@ -484,6 +484,22 @@ func (s *Service) ingestCard(ctx context.Context, tx pgx.Tx, provider, connector
 			req["reply_approval_id"] = Str(approval, "id")
 			_, e = tx.Exec(ctx, "UPDATE external_operations SET request=$2 WHERE id=$1", Str(op, "id"), JSON(req))
 		}
+	case "ask_requester":
+		body := fallback(Str(action, "body"), "请补充更多信息，以便我们继续排查。")
+		var reply Data
+		reply, e = s.CreateReply(ctx, tx, a, Str(action, "case_id"), Data{"body": body, "expected_version": Num(action, "case_version")})
+		if e == nil {
+			var approval Data
+			approval, e = s.SubmitReply(ctx, tx, a, Str(reply, "id"), Data{"expected_version": Num(reply, "version"), "case_version": Num(action, "case_version")})
+			if e == nil {
+				_, e = s.Decide(ctx, tx, a, Str(approval, "id"), Data{"expected_version": Num(approval, "version"), "decision": "approve"})
+			}
+			if e == nil {
+				req["ask_requester_reply_id"] = Str(reply, "id")
+				req["ask_requester_approval_id"] = Str(approval, "id")
+				_, e = tx.Exec(ctx, "UPDATE external_operations SET request=$2 WHERE id=$1", Str(op, "id"), JSON(req))
+			}
+		}
 	case "confirm_development":
 		_, e = s.ConfirmDevelopment(ctx, tx, a, Str(action, "case_id"), action)
 	default:

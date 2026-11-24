@@ -34,6 +34,16 @@ func (s *Server) taskRuntimeRoutes(m *http.ServeMux) {
 			return v, 201, e
 		})
 	})
+	m.HandleFunc("GET /api/v1/development-tasks/{id}/inputs/{input_id}/context", func(w http.ResponseWriter, r *http.Request) {
+		s.respond(w, r, func() (service.Data, error) {
+			return s.S.TaskInputContext(r.Context(), actor(r), r.PathValue("id"), r.PathValue("input_id"))
+		})
+	})
+	m.HandleFunc("GET /api/v1/development-tasks/{id}/inputs/{input_id}/context/refs/{ref_id}", func(w http.ResponseWriter, r *http.Request) {
+		s.respond(w, r, func() (service.Data, error) {
+			return s.S.TaskInputContextPage(r.Context(), actor(r), r.PathValue("id"), r.PathValue("input_id"), r.PathValue("ref_id"), r.URL.Query().Get("cursor"))
+		})
+	})
 	m.HandleFunc("POST /api/v1/development-tasks/{id}/inputs/{input_id}/actions", func(w http.ResponseWriter, r *http.Request) {
 		s.change(w, r, func(tx pgx.Tx, a service.Actor, b service.Data) (service.Data, int, error) {
 			v, e := s.S.TaskInputAction(r.Context(), tx, a, r.PathValue("id"), r.PathValue("input_id"), b)

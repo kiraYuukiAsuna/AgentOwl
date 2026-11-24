@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -234,5 +235,73 @@ func TestNotificationDraftReplySend(t *testing.T) {
 				t.Fatal("reply was not sent once", f.sent)
 			}
 		})
+	}
+}
+
+func TestNotificationAskRequesterCreatesApprovedReply(t *testing.T) {
+	f := newFeedbackFixture(t, "feishu")
+	s, ctx := f.s, context.Background()
+	notify := supportConfig(t, s, "channels", Data{"connector_id": f.connector, "external_id": "oc_oncall", "enabled": true, "visibility": "internal"}, nil)
+	supportConfig(t, s, "owner-routes", Data{"module": "auth", "primary_id": f.actor.ID, "channel_id": notify, "enabled": true}, nil)
+	supportConfig(t, s, "identity-bindings", Data{"provider": "feishu", "app_id": "cli_test", "subject_id": "ou_admin", "principal_id": f.actor.ID}, nil)
+	if err := s.ProcessSupportJob(ctx, "notify", Data{"case_id": Str(f.c, "id")}); err != nil {
+		t.Fatal(err)
+	}
+	op, err := one(ctx, s.DB, "SELECT to_jsonb(o) FROM external_operations o WHERE kind='notify' AND subject_id=$1", Str(f.c, "id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := Object(op, "request")
+	card := string(notificationCard(Str(op, "id"), req))
+	if !strings.Contains(card, "补问用户") {
+		t.Fatal("notification card missing ask requester action", card)
+	}
+	if _, err = s.DB.Exec(ctx, "UPDATE external_operations SET status='succeeded',remote_id='om_notice' WHERE id=$1", Str(op, "id")); err != nil {
+		t.Fatal(err)
+	}
+
+	unboundH, unboundB := supportCardActionSigned(t, Data{"open_id": "ou_stranger", "tenant_key": "tenant_test", "open_message_id": "om_notice", "open_chat_id": "oc_oncall", "token": "verify-test", "action": Data{"name": "ask_requester", "value": Data{"operation_id": Str(op, "id"), "nonce": Str(req, "card_nonce"), "action": "ask_requester"}}})
+	if _, err = s.IngestCardAction(ctx, "feishu", f.connector, unboundH, unboundB); err == nil {
+		t.Fatal("unbound user asked requester")
+	}
+	if supportCount(t, s, "SELECT count(*) FROM replies WHERE body='请补充更多信息，以便我们继续排查。'") != 0 {
+		t.Fatal("failed action created reply")
+	}
+
+	h, b := supportCardActionSigned(t, Data{"open_id": "ou_admin", "tenant_key": "tenant_test", "open_message_id": "om_notice", "open_chat_id": "oc_oncall", "token": "verify-test", "action": Data{"name": "ask_requester", "value": Data{"operation_id": Str(op, "id"), "nonce": Str(req, "card_nonce"), "action": "ask_requester"}}})
+	result, err := s.IngestCardAction(ctx, "feishu", f.connector, h, b)
+	if err != nil || !strings.Contains(string(JSON(result)), "已向用户补问") {
+		t.Fatalf("ask requester action failed: %#v %v", result, err)
+	}
+	reply, err := one(ctx, s.DB, "SELECT to_jsonb(r) FROM replies r WHERE body='请补充更多信息，以便我们继续排查。'")
+	if err != nil || Str(reply, "status") != "pending" {
+		t.Fatalf("ask requester reply not pending approval execution: %#v %v", reply, err)
+	}
+	ap, err := one(ctx, s.DB, "SELECT to_jsonb(a) FROM approvals a WHERE subject_id=$1", Str(reply, "id"))
+	if err != nil || Str(ap, "status") != "approved" || Str(Object(ap, "action"), "mention_user_id") != "ou_user" {
+		t.Fatalf("ask requester approval wrong: %#v %v", ap, err)
+	}
+	if err = s.executeApproval(ctx, Str(ap, "id")); err != nil {
+		t.Fatal(err)
+	}
+	send, err := one(ctx, s.DB, "SELECT to_jsonb(o) FROM external_operations o WHERE approval_id=$1", Str(ap, "id"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.dispatchExternal(ctx, Str(send, "id")); err != nil {
+		t.Fatal(err)
+	}
+	f.mu.Lock()
+	payload := f.sent[0]
+	f.mu.Unlock()
+	var sentCard Data
+	if len(f.sent) != 1 || json.Unmarshal([]byte(Str(payload, "content")), &sentCard) != nil {
+		t.Fatalf("ask requester was not sent once as a card: %#v", f.sent)
+	}
+	element := sentCard["elements"].([]any)[0].(map[string]any)
+	text := element["text"].(map[string]any)
+	content, _ := text["content"].(string)
+	if !strings.Contains(content, `<at user_id="ou_user"></at> 请补充更多信息`) {
+		t.Fatalf("ask requester was not sent to source user: %#v", f.sent)
 	}
 }

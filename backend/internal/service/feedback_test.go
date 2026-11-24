@@ -183,6 +183,58 @@ func TestFeedbackLarkSendThenOrdinaryParticipantCallback(t *testing.T) {
 	}
 }
 
+func TestReplySendMentionsSourceUserInLarkGroupOnly(t *testing.T) {
+	f := newFeedbackFixture(t, "feishu")
+	op := f.send(t)
+	f.mu.Lock()
+	payload := f.sent[0]
+	f.mu.Unlock()
+	var card Data
+	if Str(payload, "msg_type") != "interactive" || json.Unmarshal([]byte(Str(payload, "content")), &card) != nil {
+		t.Fatalf("Lark group reply did not send feedback card: %#v", payload)
+	}
+	element := card["elements"].([]any)[0].(map[string]any)
+	text := element["text"].(map[string]any)
+	cardText, _ := text["content"].(string)
+	if !strings.Contains(cardText, `<at user_id="ou_user"></at>`) {
+		t.Fatalf("Lark group reply did not include source-user mention card: %#v", payload)
+	}
+	if !strings.Contains(Str(Object(op, "request"), "mention_user_id"), "ou_user") {
+		t.Fatalf("mention target was not frozen in operation: %#v", op)
+	}
+}
+
+func TestReplySendDoesNotMentionPrivateOrGitHub(t *testing.T) {
+	ctx := context.Background()
+	private := newFeedbackFixture(t, "feishu")
+	env := Object(private.c, "environment")
+	env["p2p_chat"], env["private_connector_id"], env["external_channel_id"], env["private_actor_id"] = true, private.connector, "oc_private", "ou_user"
+	private.channel = privateChannelID(private.connector, "ou_user", "oc_private")
+	if _, err := private.s.DB.Exec(ctx, "UPDATE cases SET channel_id='',environment=$2 WHERE id=$1", Str(private.c, "id"), JSON(env)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := private.s.DB.Exec(ctx, "UPDATE source_messages SET channel_id=$2 WHERE id=$1", private.source, private.channel); err != nil {
+		t.Fatal(err)
+	}
+	private.c, _ = locked(ctx, private.s.DB, "cases", Str(private.c, "id"))
+	private.send(t)
+	private.mu.Lock()
+	privatePayload := private.sent[0]
+	private.mu.Unlock()
+	if strings.Contains(Str(privatePayload, "content"), `"tag":"at"`) || strings.Contains(Str(privatePayload, "content"), `<at user_id=`) {
+		t.Fatalf("private reply included mention: %#v", privatePayload)
+	}
+
+	github := newFeedbackFixture(t, "github")
+	github.send(t)
+	github.mu.Lock()
+	githubBody := Str(github.sent[0], "body")
+	github.mu.Unlock()
+	if strings.Contains(githubBody, `<at user_id=`) || strings.Contains(githubBody, `"tag":"at"`) {
+		t.Fatalf("GitHub reply included Lark mention: %q", githubBody)
+	}
+}
+
 func TestFeedbackLarkRejectsForgedStaleAndUnrelatedActors(t *testing.T) {
 	for _, name := range []string{"nonce", "remote_message", "channel", "nonparticipant", "case_injection", "approval_action", "source_recalled", "source_edited", "case_changed", "new_message", "new_reply"} {
 		t.Run(name, func(t *testing.T) {

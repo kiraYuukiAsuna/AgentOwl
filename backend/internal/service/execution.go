@@ -413,7 +413,7 @@ func (s *Service) buildContextManifest(ctx context.Context, input Data) runner.C
 		manifest.Version = 2
 		manifest.Facts = JSON(facts)
 		manifest.Coverage = "Frozen task inputs and locally received messages; no full chat history or personal user token."
-		for _, item := range []struct{ ID, Title string }{{"case", "问题详情"}, {"task_inputs", "已采用的信息"}, {"reference_inputs", "参考信息"}, {"stage_results", "已完成阶段"}, {"previous_summary", "上一阶段结果"}} {
+		for _, item := range []struct{ ID, Title string }{{"case", "问题详情"}, {"task_inputs", "已采用的信息"}, {"reference_inputs", "参考信息"}, {"source_contexts", "来源消息上下文"}, {"stage_results", "已完成阶段"}, {"previous_summary", "上一阶段结果"}} {
 			if body := Str(Object(input, "context_documents"), item.ID); body != "" {
 				manifest.Refs = append(manifest.Refs, runner.ContextRef{ID: item.ID, Kind: "snapshot", Title: item.Title, Digest: Hash([]byte(body)), EstimatedTokens: contextRefTokens(body)})
 			}
@@ -499,6 +499,9 @@ func (s *Service) executeApproval(ctx context.Context, id string) error {
 			req := Data{"body": Str(action, "body"), "channel_version": Num(action, "channel_version"), "connector_version": Num(action, "connector_version"), "case_id": Str(r, "case_id"), "reply_id": Str(r, "id"), "evidence": action["evidence"]}
 			if Bool(action, "private_channel") {
 				req["private_channel"], req["external_id"], req["private_actor_id"] = true, Str(action, "external_id"), Str(action, "private_actor_id")
+			}
+			if mention := Str(action, "mention_user_id"); mention != "" {
+				req["mention_user_id"] = mention
 			}
 			if e = s.bindReplyFeedback(ctx, tx, req, r, action); e != nil {
 				return e

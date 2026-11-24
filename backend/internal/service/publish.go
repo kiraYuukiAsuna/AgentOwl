@@ -250,6 +250,11 @@ func (s *Service) finishExternal(ctx context.Context, op Data, status string, re
 		if e != nil {
 			return e
 		}
+		if status == "succeeded" {
+			if e = s.archiveExternalOperation(ctx, tx, current, Data{"remote_id": fallback(Str(result, "remote_id"), Str(current, "remote_id")), "response": response, "issue_number": Num(result, "issue_number")}); e != nil {
+				return e
+			}
+		}
 		req := Object(current, "request")
 		if Str(current, "kind") == "reply_send" {
 			if e = s.enqueueReplyOutcome(ctx, tx, Str(current, "approval_id"), status, message); e != nil {

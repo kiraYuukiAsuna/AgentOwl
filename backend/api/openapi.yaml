@@ -5594,6 +5594,101 @@
         }
       }
     },
+    "/api/v1/development-tasks/{id}/inputs/{input_id}/context": {
+      "get": {
+        "operationId": "getApiV1DevelopmentTasksInputsContextByIdByInputId",
+        "tags": [
+          "TaskRuntime"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskInputContext"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "input_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/development-tasks/{id}/inputs/{input_id}/context/refs/{ref_id}": {
+      "get": {
+        "operationId": "getApiV1DevelopmentTasksInputsContextRefsByIdByInputIdByRefId",
+        "tags": [
+          "TaskRuntime"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextPage"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "input_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ref_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/api/v1/development-tasks/{id}/inputs/{input_id}/actions": {
       "post": {
         "operationId": "postApiV1DevelopmentTasksInputsActionsByIdByInputId",
@@ -9406,6 +9501,50 @@
             "format": "int64"
           }
         }
+      },
+      "ContextRef": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string"},
+          "title": {"type": "string"},
+          "content_digest": {"type": "string"},
+          "estimated_tokens": {"type": "integer", "format": "int64"}
+        },
+        "required": []
+      },
+      "ContextManifest": {
+        "type": "object",
+        "properties": {
+          "version": {"type": "integer", "format": "int64"},
+          "facts": {"type": "object", "additionalProperties": true},
+          "coverage": {"type": "string"},
+          "token_budget": {"type": "integer", "format": "int64"},
+          "refs": {"type": "array", "items": {"$ref": "#/components/schemas/ContextRef"}}
+        },
+        "required": []
+      },
+      "TaskInputContext": {
+        "type": "object",
+        "properties": {
+          "manifest": {"$ref": "#/components/schemas/ContextManifest"},
+          "facts": {"type": "object", "additionalProperties": true}
+        },
+        "required": []
+      },
+      "ContextPage": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "content_digest": {"type": "string"},
+          "text": {"type": "string"},
+          "offset": {"type": "integer", "format": "int64"},
+          "total_characters": {"type": "integer", "format": "int64"},
+          "next_cursor": {"type": "string"},
+          "next_tool": {"type": "string"},
+          "facts": {"type": "object", "additionalProperties": true}
+        },
+        "required": []
       },
       "TaskInputReceipt": {
         "type": "object",

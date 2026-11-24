@@ -19,6 +19,22 @@ func (s *Service) sourceAdapter(ctx context.Context, q DB, co Data) (integration
 		return nil, nil, integration.ErrUnsupportedOperation
 	}
 }
+
+func larkMentionMarkup(userID string) string {
+	if !strings.HasPrefix(userID, "ou_") {
+		return ""
+	}
+	return `<at user_id="` + userID + `"></at>`
+}
+
+func replyBodyWithMention(request Data, body string) string {
+	mention := larkMentionMarkup(Str(request, "mention_user_id"))
+	if mention == "" || strings.Contains(body, mention) {
+		return body
+	}
+	return mention + " " + body
+}
+
 func sourceWrite(op, ch, co, c Data) integration.SourceWrite {
 	request := Object(op, "request")
 	env := Object(c, "environment")
@@ -34,7 +50,11 @@ func sourceWrite(op, ch, co, c Data) integration.SourceWrite {
 		write.ReplyInThread = Str(env, "platform_thread_id") != ""
 		if Str(co, "provider") == "github" {
 			write.Body = replyFeedbackBody(op, write.Body)
-		} else if Str(request, "card_nonce") != "" && len(Object(request, "feedback_context")) > 0 {
+		} else if !Bool(ch, "private") {
+			write.Body = replyBodyWithMention(request, write.Body)
+		}
+		write.MentionUserID = Str(request, "mention_user_id")
+		if Str(co, "provider") != "github" && Str(request, "card_nonce") != "" && len(Object(request, "feedback_context")) > 0 {
 			write.Card = replyFeedbackCard(op, write.Body)
 		}
 	} else if Str(op, "kind") == "read_mark" {

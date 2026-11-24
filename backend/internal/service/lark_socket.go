@@ -138,6 +138,9 @@ func (s *Service) runLarkSocket(ctx context.Context, id string) {
 		if e != nil || incoming.Event == nil {
 			return errors.New("invalid message event")
 		}
+		if len(incoming.Event.MentionedUserIDs) == 0 && Str(c, "bot_open_id") != "" {
+			incoming.Event.MentionedUserIDs = []string{Str(c, "bot_open_id")}
+		}
 		bounded, stop := context.WithTimeout(eventCtx, 2500*time.Millisecond)
 		defer stop()
 		_, e = s.ingestVerifiedEvent(bounded, Str(c, "provider"), id, c, secrets, incoming.Event, nil)
@@ -152,6 +155,9 @@ func (s *Service) runLarkSocket(ctx context.Context, id string) {
 		incoming, e := cli.ParseLongConnectionEvent(ev.EventReq.Body)
 		if e != nil || incoming.Event == nil {
 			return errors.New("invalid recall event")
+		}
+		if len(incoming.Event.MentionedUserIDs) == 0 && Str(c, "bot_open_id") != "" {
+			incoming.Event.MentionedUserIDs = []string{Str(c, "bot_open_id")}
 		}
 		bounded, stop := context.WithTimeout(eventCtx, 2500*time.Millisecond)
 		defer stop()

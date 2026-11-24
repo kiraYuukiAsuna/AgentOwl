@@ -99,6 +99,20 @@ func sourceThread(e integration.Event) string {
 	return fallback(e.ThreadID, fallback(e.RootID, fallback(e.ParentID, e.MessageID)))
 }
 
+func (s *Service) shouldCreateCaseForEvent(ch Data, ev integration.Event, historical bool, botOpenID string) bool {
+	if Bool(ch, "private") || ev.ChatType == "p2p" || ev.Repository != "" {
+		return true
+	}
+	mode := fallback(Str(ch, "reply_mode"), "draft")
+	if mode == "auto" || mode == "draft" {
+		return true
+	}
+	if mode == "mentions" {
+		return botOpenID != "" && contains(ev.MentionedUserIDs, botOpenID)
+	}
+	return !historical
+}
+
 func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 	return s.transaction(ctx, func(tx pgx.Tx) error {
 		in, e := locked(ctx, tx, "ingest_events", id)
@@ -134,6 +148,8 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 		if !Bool(ch, "enabled") || connectorDisabled(co) || Str(ch, "connector_id") != Str(in, "connector_id") {
 			return finish()
 		}
+		thread := sourceThread(ev)
+		historical := strings.HasPrefix(ev.ID, "history:")
 		// Bot echoes never initiate a support cycle. Deleted bot messages may still
 		// remove previously stored source data.
 		if ev.Bot && !ev.Deleted {
@@ -142,6 +158,9 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 				return e
 			}
 			if !allowed || ev.ActorID == Str(co, "bot_open_id") || ev.ActorID == Str(co, "sender_id") {
+				if _, err := s.archiveSourceEvent(ctx, tx, Str(in, "connector_id"), ch, ev, "", thread); err != nil {
+					return err
+				}
 				return finish()
 			}
 		}
@@ -159,8 +178,7 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 				}
 			}
 		}
-		thread := sourceThread(ev)
-		historical := strings.HasPrefix(ev.ID, "history:")
+		// thread and historical were computed before bot echo filtering so ignored bot messages still enter the archive.
 		lockThread := thread
 		if ev.ChatType == "p2p" && ev.ActorID != "" {
 			lockThread = "p2p:" + ev.ActorID
@@ -173,6 +191,10 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 			return e
 		}
 		exists := e == nil
+		content := boundedText(integration.Redact(ev.Text), 64000)
+		if ev.Deleted {
+			content = ""
+		}
 		if exists {
 			if Bool(old, "deleted") && !ev.Deleted {
 				return finish()
@@ -181,13 +203,13 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 			if !a.IsZero() && !b.IsZero() && b.Before(a) {
 				return finish()
 			}
-			if Str(old, "source_revision") == ev.SourceRevision && Bool(old, "deleted") == ev.Deleted && Str(old, "content") == ev.Text {
+			if Str(old, "source_revision") == sourceRevision(ev, sourceOccurredAt(ev)) && Bool(old, "deleted") == ev.Deleted && Str(old, "content") == content {
 				return finish()
 			}
 		}
 		cid := Str(old, "case_id")
 		if cid == "" {
-			m, err := one(ctx, tx, "SELECT to_jsonb(m) FROM source_messages m WHERE connector_id=$1 AND channel_id=$2 AND case_id IS NOT NULL AND (thread_id=$3 OR external_id=$4 OR external_id=$5) ORDER BY created_at LIMIT 1", Str(in, "connector_id"), Str(ch, "id"), thread, ev.RootID, ev.ParentID)
+			m, err := one(ctx, tx, `SELECT to_jsonb(m) FROM source_messages m JOIN cases c ON c.id=m.case_id WHERE m.connector_id=$1 AND m.channel_id=$2 AND m.case_id IS NOT NULL AND c.status NOT IN ('resolved','closed') AND (($3<>'' AND m.thread_id=$3) OR ($4<>'' AND (m.external_id=$4 OR m.root_id=$4)) OR ($5<>'' AND (m.external_id=$5 OR m.parent_id=$5))) ORDER BY COALESCE(m.occurred_at,m.created_at),m.created_at LIMIT 1`, Str(in, "connector_id"), Str(ch, "id"), thread, ev.RootID, ev.ParentID)
 			if err != nil && err != NotFound {
 				return err
 			}
@@ -197,13 +219,13 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 			m, err := one(ctx, tx, `SELECT to_jsonb(m) FROM source_messages m JOIN cases c ON c.id=m.case_id
 				WHERE m.connector_id=$1 AND m.channel_id=$2 AND m.actor_id=$3 AND m.case_id IS NOT NULL AND NOT m.deleted
 				AND c.status NOT IN ('resolved','closed')
-				ORDER BY m.created_at DESC,m.external_id DESC LIMIT 1`, Str(in, "connector_id"), Str(ch, "id"), ev.ActorID)
+				ORDER BY COALESCE(m.occurred_at,m.created_at) DESC,m.external_id DESC LIMIT 1`, Str(in, "connector_id"), Str(ch, "id"), ev.ActorID)
 			if err != nil && err != NotFound {
 				return err
 			}
 			cid = Str(m, "case_id")
 		}
-		if cid == "" && !ev.Deleted {
+		if cid == "" && !ev.Deleted && s.shouldCreateCaseForEvent(ch, ev, historical, Str(co, "bot_open_id")) {
 			cid = ID()
 			title := boundedText(strings.TrimSpace(strings.Split(ev.Text, "\n")[0]), 250)
 			if title == "" {
@@ -222,31 +244,11 @@ func (s *Service) consumeSupportEvent(ctx context.Context, id string) error {
 				return e
 			}
 		}
-		mid := Str(old, "id")
-		content := boundedText(integration.Redact(ev.Text), 64000)
-		if ev.Deleted {
-			content = ""
-		}
-		var caseID any
-		if cid != "" {
-			caseID = cid
-		}
-		if exists {
-			_, e = tx.Exec(ctx, "UPDATE source_messages SET content=$2,source_revision=$3,deleted=$4,version=version+1,updated_at=now() WHERE id=$1", mid, content, ev.SourceRevision, ev.Deleted)
-		} else {
-			mid = ID()
-			occurred := ev.OccurredAt
-			if occurred.IsZero() {
-				occurred = time.Now()
-			}
-			_, e = tx.Exec(ctx, "INSERT INTO source_messages(id,connector_id,channel_id,external_id,case_id,actor_id,content,thread_id,source_url,source_revision,deleted,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", mid, Str(in, "connector_id"), Str(ch, "id"), ev.MessageID, caseID, ev.ActorID, content, thread, ev.SourceURL, ev.SourceRevision, ev.Deleted, occurred)
-		}
+		message, e := s.archiveSourceEvent(ctx, tx, Str(in, "connector_id"), ch, ev, cid, thread)
 		if e != nil {
 			return e
 		}
-		if _, e = tx.Exec(ctx, "INSERT INTO source_message_versions(message_id,version,content,source_revision,deleted) SELECT id,version,content,source_revision,deleted FROM source_messages WHERE id=$1", mid); e != nil {
-			return e
-		}
+		mid := Str(message, "id")
 		if cid != "" {
 			c, e := locked(ctx, tx, "cases", cid)
 			if e != nil {
@@ -844,6 +846,7 @@ func (s *Service) syncSupportChannel(ctx context.Context, p Data) error {
 	end, _ := time.Parse(time.RFC3339Nano, Str(p, "end_time"))
 	page, err := adapter.ReadThread(ctx, integration.SourceRead{ChannelID: Str(ch, "external_id"), ThreadID: thread, Cursor: cursor, Repository: repository, Since: start, Until: end})
 	if err != nil {
+		_ = s.recordSourceSyncStatus(ctx, s.DB, Str(co, "id"), Str(ch, "id"), thread, time.Time{}, safeError(err))
 		return err
 	}
 	for _, ev := range page.Events {
@@ -899,6 +902,9 @@ func (s *Service) syncSupportChannel(ctx context.Context, p Data) error {
 		patch := Data{"last_page_synced_at": time.Now().UTC(), "last_sync_error": ""}
 		if !Bool(p, "periodic") && Str(p, "thread_id") == "" && Num(p, "issue_number") == 0 {
 			patch["last_synced_at"] = Str(p, "end_time")
+		}
+		if e = s.recordSourceSyncStatus(ctx, tx, Str(co, "id"), Str(ch, "id"), thread, end, ""); e != nil {
+			return e
 		}
 		_, e = tx.Exec(ctx, "UPDATE configs SET data=data||$2::jsonb,updated_at=now() WHERE id=$1", Str(ch, "id"), JSON(patch))
 		return e
@@ -1204,6 +1210,9 @@ func (s *Service) queueSupportNotification(ctx context.Context, p Data) error {
 			body = "人工接管问题收到新消息\n" + body
 		}
 		actions := Data{"claim": Data{"case_id": Str(c, "id"), "expected_version": Num(c, "version")}, "takeover": Data{"case_id": Str(c, "id"), "expected_version": Num(c, "version")}}
+		if Str(Object(c, "environment"), "last_message_id") != "" {
+			actions["ask_requester"] = Data{"case_id": Str(c, "id"), "case_version": Num(c, "version"), "body": "请补充更多信息，以便我们继续排查。"}
+		}
 
 		replyID := Str(p, "reply_id")
 		if replyID != "" {
@@ -1362,9 +1371,9 @@ func (s *Service) DispatchMessage(ctx context.Context, op Data) (Data, error) {
 
 func notificationCard(operationID string, request Data) json.RawMessage {
 	buttons := []any{}
-	labels := map[string]string{"claim": "认领", "takeover": "人工接管", "resume": "恢复辅助", "approve": "批准", "reject": "拒绝", "revoke": "撤销批准", "confirm_development": "确认开发", "send_reply": "批准并发送"}
+	labels := map[string]string{"claim": "认领", "takeover": "人工接管", "resume": "恢复辅助", "approve": "批准", "reject": "拒绝", "revoke": "撤销批准", "confirm_development": "确认开发", "ask_requester": "补问用户", "send_reply": "批准并发送"}
 	actions := Object(request, "card_actions")
-	for _, name := range []string{"claim", "takeover", "resume", "approve", "reject", "revoke", "confirm_development", "send_reply"} {
+	for _, name := range []string{"claim", "takeover", "resume", "approve", "reject", "revoke", "confirm_development", "ask_requester", "send_reply"} {
 		if len(Object(actions, name)) == 0 {
 			continue
 		}
@@ -1383,7 +1392,7 @@ func notificationCard(operationID string, request Data) json.RawMessage {
 }
 
 func notificationResultCard(op Data, action string, duplicate bool) json.RawMessage {
-	labels := map[string]string{"claim": "已认领", "takeover": "已接管", "resume": "已恢复辅助", "approve": "已批准", "reject": "已拒绝", "revoke": "已撤销批准", "confirm_development": "已确认开发", "send_reply": "已批准回复并加入发送队列"}
+	labels := map[string]string{"claim": "已认领", "takeover": "已接管", "resume": "已恢复辅助", "approve": "已批准", "reject": "已拒绝", "revoke": "已撤销批准", "confirm_development": "已确认开发", "ask_requester": "已向用户补问", "send_reply": "已批准回复并加入发送队列"}
 	note := labels[action]
 	if note == "" {
 		note = "操作已记录"

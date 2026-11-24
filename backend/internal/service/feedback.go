@@ -18,7 +18,7 @@ import (
 var feedbackLabels = map[string]string{"resolved": "用户确认已解决", "unresolved": "用户反馈未解决，等待继续排查", "human": "用户请求转人工，已暂停自动回复"}
 
 func feedbackCardDocument(body string, elements ...any) json.RawMessage {
-	items := []any{Data{"tag": "div", "text": Data{"tag": "plain_text", "content": integration.Redact(body)}}}
+	items := []any{Data{"tag": "div", "text": Data{"tag": "lark_md", "content": integration.Redact(body)}}}
 	items = append(items, elements...)
 	return JSON(Data{"config": Data{"wide_screen_mode": true}, "elements": items})
 }

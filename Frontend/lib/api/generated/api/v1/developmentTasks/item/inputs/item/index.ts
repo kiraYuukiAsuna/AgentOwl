@@ -4,6 +4,8 @@
 // @ts-ignore
 import { ActionsRequestBuilderRequestsMetadata, type ActionsRequestBuilder } from './actions/index.js';
 // @ts-ignore
+import { ContextRequestBuilderNavigationMetadata, ContextRequestBuilderRequestsMetadata, type ContextRequestBuilder } from './context/index.js';
+// @ts-ignore
 import { type BaseRequestBuilder, type KeysToExcludeForNavigationMetadata, type NavigationMetadata } from '@microsoft/kiota-abstractions';
 
 /**
@@ -14,6 +16,10 @@ export interface WithInput_ItemRequestBuilder extends BaseRequestBuilder<WithInp
      * The actions property
      */
     get actions(): ActionsRequestBuilder;
+    /**
+     * The context property
+     */
+    get context(): ContextRequestBuilder;
 }
 /**
  * Uri template for the request builder.
@@ -25,6 +31,10 @@ export const WithInput_ItemRequestBuilderUriTemplate = "{+baseurl}/api/v1/develo
 export const WithInput_ItemRequestBuilderNavigationMetadata: Record<Exclude<keyof WithInput_ItemRequestBuilder, KeysToExcludeForNavigationMetadata>, NavigationMetadata> = {
     actions: {
         requestsMetadata: ActionsRequestBuilderRequestsMetadata,
+    },
+    context: {
+        requestsMetadata: ContextRequestBuilderRequestsMetadata,
+        navigationMetadata: ContextRequestBuilderNavigationMetadata,
     },
 };
 /* tslint:enable */
