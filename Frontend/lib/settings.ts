@@ -163,9 +163,9 @@ export const settingsSections: Record<string, SettingSection> = {
       { key: "appId", label: "App ID", visibleWhen: larkOnly, group: "应用信息" },
       { key: "tenantId", label: "Tenant ID", visibleWhen: larkOnly, group: "应用信息" },
       {
-        key: "repositoryId", label: "使用已有代码仓库", lookup: "repositories",
+        key: "repositoryId", label: "关联已有代码仓库", lookup: "repositories",
         visibleWhen: githubOnly, group: "接收反馈的仓库",
-        hint: "Token 留空时使用仓库凭据。",
+        hint: "若下方未单独填写 Token，将复用该仓库的访问凭据。",
       },
       {
         key: "owner",
@@ -177,7 +177,7 @@ export const settingsSections: Record<string, SettingSection> = {
       {
         key: "senderLogin",
         label: "评论发送账号（可选）",
-        placeholder: "agentowl[bot]",
+        placeholder: "例如：agentowl[bot]",
         visibleWhen: githubOnly, advanced: true,
       },
       {
@@ -193,8 +193,8 @@ export const settingsSections: Record<string, SettingSection> = {
         kind: "password",
         visibleWhen: larkOnly, group: "事件接收",
       },
-      { key: "encryptKey", label: "Encrypt Key", kind: "password", visibleWhen: larkOnly, group: "事件接收", hint: "HTTP 推送或卡片回调必填。" },
-      { key: "userLoginEnabled", label: "飞书登录与绑定", kind: "boolean", default: false, visibleWhen: larkOnly, group: "用户身份", hint: "在飞书应用中登记本站的 /auth/lark/callback 回调地址。" },
+      { key: "encryptKey", label: "Encrypt Key", kind: "password", visibleWhen: larkOnly, group: "事件接收", hint: "使用 HTTP 事件推送或交互卡片回调时必填。" },
+      { key: "userLoginEnabled", label: "飞书登录与绑定", kind: "boolean", default: false, visibleWhen: larkOnly, group: "用户身份", hint: "开启前，请先在飞书应用安全设置中登记回调地址：/auth/lark/callback" },
       { ...token, visibleWhen: githubOnly, group: "访问凭据" },
       { key: "webhookSecret", label: "Webhook 签名密钥", kind: "password", visibleWhen: githubOnly, group: "事件接收", placeholder: "GitHub Webhook Secret" },
       {
@@ -260,7 +260,7 @@ export const settingsSections: Record<string, SettingSection> = {
       },
       {
         key: "pollIntervalMinutes", label: "定时同步间隔（分钟）", kind: "number", default: 0,
-        hint: "0 为关闭；仅同步 Issue 和评论。",
+        hint: "填 0 关闭；开启后仅定时拉取 Issue 与评论。",
       },
       visibility,
       enabled,
@@ -287,32 +287,32 @@ export const settingsSections: Record<string, SettingSection> = {
       },
       {
         key: "prPollIntervalMinutes", label: "PR 状态同步间隔（分钟）", kind: "number", default: 5,
-        hint: "0 为关闭。",
+        hint: "填 0 关闭。",
       },
       {
         key: "allowedPaths",
         label: "允许修改的路径",
         kind: "lines",
-        hint: "每行一个相对路径，末尾不加 /。",
+        hint: "每行一个仓库内相对路径，末尾不加 /。",
         placeholder: "internal/auth\ninternal/token",
       },
       {
         key: "testArgv",
         label: "测试命令参数",
         kind: "lines",
-        hint: "每行一个命令或参数，不支持 Shell 语法。",
+        hint: "每行一个命令或参数（直接执行，不支持 Shell 管道与重定向）。",
         placeholder: "go\ntest\n./internal/auth/...",
       },
       {
         key: "runnerImage",
         label: "任务运行镜像",
-        placeholder: "镜像 digest 或已批准的镜像",
+        placeholder: "带 @sha256:... 摘要的工具链镜像",
       },
       {
         key: "config",
         label: "运行配置（JSON）",
         kind: "json",
-        hint: "请勿填写密钥。",
+        hint: "仅填写工具链或缓存变量，请勿包含密钥。",
         placeholder:
           '{"test_env":{"GOCACHE":"/tmp/go-cache","GOMODCACHE":"/tmp/go-mod"}}',
       },
@@ -342,8 +342,8 @@ export const settingsSections: Record<string, SettingSection> = {
         { value: "draining", label: "仅完成现有任务" },
         { value: "disabled", label: "停用" },
       ] },
-      { key: "schedulingWeight", label: "调度权重", kind: "number", default: 1, hint: "1–1000，数值越大越优先。" },
-      { key: "allowedImages", label: "允许运行的镜像", kind: "lines", hint: "每行一个镜像 digest，留空不额外限制。" },
+      { key: "schedulingWeight", label: "调度权重", kind: "number", default: 1, hint: "范围 1–1000，数值越大优先级越高。" },
+      { key: "allowedImages", label: "允许运行的镜像", kind: "lines", hint: "每行一个带 digest 的镜像地址，留空则不额外限制。" },
       { key: "labels", label: "机器标签（JSON）", kind: "json", placeholder: '{"region":"cn-bj","env":"prod"}' },
       { key: "token", label: "执行访问令牌", kind: "password" },
       { key: "callbackToken", label: "回调访问令牌", kind: "password" },
@@ -372,10 +372,10 @@ export const settingsSections: Record<string, SettingSection> = {
           { value: "create_task", label: "创建开发任务" },
           { value: "reply_send", label: "发送回复" },
           { value: "knowledge_publish", label: "发布知识" },
-          { value: "plan", label: "生成方案" },
+          { value: "plan", label: "制定方案" },
           { value: "edit", label: "修改代码" },
           { value: "test", label: "运行测试" },
-          { value: "review", label: "审查变更" },
+          { value: "review", label: "代码审查" },
           { value: "publish_pr", label: "提交 PR" },
         ],
         default: "reply_send",
@@ -394,29 +394,29 @@ export const settingsSections: Record<string, SettingSection> = {
       },
       { key: "channelId", label: "消息渠道", lookup: "channels", required: true },
       { key: "repositoryId", label: "开发仓库", lookup: "repositories", required: true },
-      { key: "sponsorPrincipalId", label: "授权负责人", lookup: "principals", required: true, hint: "需有该渠道和仓库的开发权限。" },
+      { key: "sponsorPrincipalId", label: "授权负责人", lookup: "principals", required: true, hint: "所选成员需同时具备该渠道和仓库的开发权限。" },
       { key: "condition", label: "创建条件", kind: "textarea", required: true, placeholder: "例如：已确认的登录故障，且有明确复现步骤" },
-      { key: "followupMode", label: "后续补充", kind: "select", default: "manual", options: [{value:"manual",label:"由开发者确认"},{value:"within_scope",label:"自动应用范围内补充"}] },
+      { key: "followupMode", label: "后续补充", kind: "select", default: "manual", options: [{value:"manual",label:"手动确认后应用"},{value:"within_scope",label:"自动应用范围内补充"}] },
       { key: "senderTypes", label: "任务来源", kind: "lines", options: [{value:"human",label:"用户消息"},{value:"bot",label:"其他机器人的消息"}] },
       {
         key: "channelIds",
         label: "渠道范围",
         kind: "lines",
         lookup: "channels",
-        hint: "不选则适用全部渠道；自动批准需有成功发送记录。",
+        hint: "留空表示适用全部渠道；启用自动批准前，对应渠道需至少成功发送过一次消息。",
       },
       {
         key: "repositoryIds",
         label: "仓库范围",
         kind: "lines",
         lookup: "repositories",
-        hint: "不选则适用全部仓库。",
+        hint: "留空表示适用全部仓库。",
       },
       {
         key: "allowedPaths",
         label: "允许修改的路径",
         kind: "lines",
-        hint: "每行一个相对路径；留空不自动批准代码变更。",
+        hint: "每行一个相对路径；留空时不会自动批准代码修改。",
       },
       {
         key: "maxFiles",
@@ -468,7 +468,7 @@ export const settingsSections: Record<string, SettingSection> = {
         key: "password",
         label: "账号密码",
         kind: "password",
-        placeholder: "新建本地账号时填写，12–72 字节",
+        placeholder: "新建本地账号时必填，长度 12–72 字节",
       },
       {
         key: "role",
@@ -498,7 +498,7 @@ export const settingsSections: Record<string, SettingSection> = {
       {
         key: "subject",
         label: "登录身份标识（Subject）",
-        placeholder: "登录平台提供的 Subject",
+        placeholder: "OIDC 身份源提供的稳定 Subject 标识",
       },
       { key: "active", label: "账号启用", kind: "boolean", default: true },
     ],
@@ -615,7 +615,7 @@ export const settingsSections: Record<string, SettingSection> = {
           { value: "pending", label: "等待同步" },
           { value: "revoked", label: "撤销授权" },
         ],
-        hint: "撤销后停止引用相关知识。",
+        hint: "撤销后，该来源下的知识将不再用于自动回复。",
       },
       visibility,
       {
@@ -649,14 +649,14 @@ export function settingFields(
     .filter((field) => section !== "channels" || field.key !== "pollIntervalMinutes" || ["github", "feishu", "lark"].includes(provider ?? ""))
     .map((field) => {
       if (section === "channels" && field.key === "pollIntervalMinutes" && (provider === "feishu" || provider === "lark")) {
-        return { ...field, hint: "0 为关闭；首次可能导入历史消息，不自动发送回复。" };
+        return { ...field, hint: "填 0 关闭；首次开启会拉取历史消息，拉取内容不会自动触发回复。" };
       }
       if (section === "channels" && field.key === "externalId") {
         if (provider === "github") return {
           ...field,
           label: "Issue / PR 或仓库范围",
           placeholder: "issue:123、pull:456 或 owner/repo",
-          hint: "PR 评论需另加 issue:N；owner/repo 表示整个仓库。",
+          hint: "填 owner/repo 监听整个仓库；若需接收某个 PR 的普通评论，请另加 issue:编号。",
         };
         if (provider === "feishu" || provider === "lark") return {
           ...field,

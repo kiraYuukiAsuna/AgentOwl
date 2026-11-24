@@ -50,7 +50,7 @@ export default function DevelopmentPage() {
             <option value="queued">排队中</option>
             <option value="running">运行中</option>
             <option value="pending_approval">待审批</option>
-            <option value="blocked">无法继续</option>
+            <option value="blocked">已阻塞</option>
             <option value="paused">已暂停</option>
             <option value="pr_open">PR 待合并</option>
             <option value="failed">失败</option>

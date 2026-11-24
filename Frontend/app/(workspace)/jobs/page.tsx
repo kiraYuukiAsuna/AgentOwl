@@ -327,7 +327,7 @@ export default function JobsPage() {
               onChange={(e) => setReason(e.target.value)}
               required
               maxLength={2000}
-              placeholder="模型服务已恢复"
+              placeholder="例如：模型服务已恢复，重新入队执行"
             />
           </Field>
           <div className="flex justify-end gap-2">

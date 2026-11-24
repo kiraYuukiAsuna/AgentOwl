@@ -58,7 +58,7 @@ const actions: Record<string, string> = {
   revise: "更新开发目标", pause: "暂停开发任务", cancel: "取消开发任务",
   feedback_transferred: "反馈需要人工协助", withdraw: "撤回知识条目",
   notification_failed: "值班通知发送失败", notification_outcome_unknown: "值班通知结果待核对",
-  remote_effect_after_fence_change: "任务变更后收到平台执行结果",
+  remote_effect_after_fence_change: "任务已变更，忽略迟到的平台结果",
 };
 export function activityAction(action?: string | null, resource?: string | null): string {
   if (action === "save") return `保存${activityResource(resource)}`;

@@ -436,7 +436,7 @@ function SettingsSection({ section }: { section: string }) {
         >
           {!admin && (
             <div className="border-b border-border bg-muted/50 px-5 py-3 text-xs text-muted-foreground">
-              只读
+              当前为只读模式，仅管理员可修改此配置。
             </div>
           )}
           {isLoading ? (
@@ -581,7 +581,7 @@ function SettingsSection({ section }: { section: string }) {
             </div>
           ) : (
             <Empty
-              title={`还没有${config.title}`}
+              title={`暂无${config.title}`}
               action={
                 admin && section !== "connections" && (
                   <Button variant="outline" size="sm" onClick={() => edit({})}>
@@ -616,7 +616,7 @@ function SettingsSection({ section }: { section: string }) {
             }
           />
         ) : (
-          <Empty title="无法加载账号，请刷新页面" />
+          <Empty title="未找到该平台账号，请刷新页面后重试" />
         )}
       </Dialog>
       {config && (
@@ -661,7 +661,7 @@ function SettingsSection({ section }: { section: string }) {
               }
             }}
             title={`删除${config.title}`}
-            description="删除后无法恢复。"
+            description="删除后无法恢复，请谨慎操作。"
           >
             <div className="space-y-4">
               <p className="text-sm leading-6 text-muted-foreground">
@@ -676,7 +676,7 @@ function SettingsSection({ section }: { section: string }) {
                   disabled={!!deleting}
                 />
                 <span>
-                  强制删除，同时解除渠道授权、值班通知和审批策略等关联。历史记录保留。
+                  强制删除并解除关联（包括渠道授权、值班通知和审批策略；历史操作记录仍会保留）。
                 </span>
               </label>
               <div className="flex justify-end gap-2 border-t border-border pt-4">

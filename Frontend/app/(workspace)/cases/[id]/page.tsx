@@ -107,7 +107,7 @@ export default function CaseDetailPage() {
         expectedVersion: item.version ?? 0,
       });
       toast.success(
-        generate ? "正在生成草稿" : "回复草稿已保存",
+        generate ? "已开始生成回复草稿，请稍候" : "回复草稿已保存",
       );
       setBody("");
       await mutate();
@@ -228,7 +228,7 @@ export default function CaseDetailPage() {
             references={objectData(item.environment).attachments}
           />
           <Panel
-            title="原始对话"
+            title="来源消息"
           >
             {item.messages?.length ? (
               <div className="divide-y divide-border">
@@ -369,7 +369,7 @@ export default function CaseDetailPage() {
                   aria-label="回复草稿"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="回复内容（请勿填写密码或 Token）"
+                  placeholder="输入回复内容（请勿包含密码或 Token）"
                   className="min-h-32"
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -620,7 +620,7 @@ export default function CaseDetailPage() {
         open={editOpen}
         onOpenChange={setEditOpen}
         title="编辑问题"
-        description="修改内容或回复渠道后，已有审批可能失效。"
+        description="修改问题内容或回复渠道后，待处理的回复审批将会失效。"
       >
         <form
           className="space-y-4"
@@ -770,11 +770,11 @@ export default function CaseDetailPage() {
           <Field label="验收条件">
             <Textarea
               name="acceptanceCriteria"
-              placeholder="填写预期结果和需要通过的测试"
+              placeholder="说明期望行为，以及需要通过的测试"
               required
             />
           </Field>
-          <Field label="后续补充"><Select name="followupMode" defaultValue="manual"><option value="manual">由我确认后应用</option><option value="within_scope">自动应用范围内补充</option></Select></Field>
+          <Field label="后续补充"><Select name="followupMode" defaultValue="manual"><option value="manual">手动确认后应用</option><option value="within_scope">自动应用范围内补充</option></Select></Field>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -819,14 +819,14 @@ export default function CaseDetailPage() {
             }
           }}
         >
-          <Field label="要关联的问题 ID">
-            <Input name="targetId" required placeholder="粘贴完整的问题 ID" />
+          <Field label="目标问题 ID">
+            <Input name="targetId" required placeholder="输入目标问题的完整 ID" />
           </Field>
           <Field label="关联原因">
             <Textarea
               name="reason"
               required
-              placeholder="说明重复之处"
+              placeholder="简要说明与目标问题的关联原因"
             />
           </Field>
           <Button type="submit" disabled={!!busy}>

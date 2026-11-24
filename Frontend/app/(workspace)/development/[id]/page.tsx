@@ -288,7 +288,7 @@ export default function TaskDetailPage() {
           <Panel title="任务信息">
             <div className="px-5 py-3">
               <Definition label="状态" value={<Status value={task.status} />} />
-              <Definition label="当前运行" value={task.epoch} />
+              <Definition label="执行轮次" value={task.epoch ? `第 ${task.epoch} 轮` : "—"} />
               <Definition
                 label="创建时间"
                 value={<Time value={task.createdAt} />}
@@ -351,7 +351,7 @@ export default function TaskDetailPage() {
                 ? "人工接管开发任务"
                 : "恢复开发任务"
         }
-        description={control === "cancel" ? "取消后无法恢复，已发送的消息和 PR 不会撤回。" : control === "resume" ? "恢复前会重新检查审批。" : "当前运行将停止，恢复时会重新检查审批。"}
+        description={control === "cancel" ? "取消后无法恢复，已发出的消息和已提交的 PR 不会撤回。" : control === "resume" ? "恢复后会按当前配置重新检查审批状态。" : control === "takeover" ? "接管后会停止自动执行，由你手动处理后续流程。" : "暂停会停止当前运行，恢复时需重新检查审批。"}
       >
         <form
           className="space-y-4"
@@ -375,11 +375,11 @@ export default function TaskDetailPage() {
             }
           }}
         >
-          <Field label="操作原因">
+          <Field label={control === "cancel" ? "取消原因" : "操作原因（可选）"}>
             <Textarea
               name="reason"
               required={control === "cancel"}
-              placeholder="填写操作原因"
+              placeholder={control === "cancel" ? "请说明取消原因" : "可补充操作说明"}
             />
           </Field>
           <div className="flex justify-end gap-2">
@@ -404,7 +404,7 @@ export default function TaskDetailPage() {
         open={revisionOpen}
         onOpenChange={setRevisionOpen}
         title="修改目标与验收条件"
-        description="保存为新版本后，需重新审批和测试。"
+        description="保存后会生成新版本，需要重新审批并运行测试。"
       >
         <form
           className="space-y-4"
@@ -440,7 +440,7 @@ export default function TaskDetailPage() {
               required
             />
           </Field>
-          <Field label="后续补充"><Select name="followupMode" defaultValue="manual"><option value="manual">由我确认后应用</option><option value="within_scope">自动应用范围内补充</option></Select></Field>
+          <Field label="后续补充"><Select name="followupMode" defaultValue="manual"><option value="manual">手动确认后应用</option><option value="within_scope">自动应用范围内补充</option></Select></Field>
           <Button type="submit" disabled={busy}>
             保存修改
           </Button>

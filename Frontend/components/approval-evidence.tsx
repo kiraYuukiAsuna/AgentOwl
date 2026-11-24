@@ -20,7 +20,7 @@ export function ApprovalEvidence({ approval }: { approval: Approval }) {
       <Definition label="任务目标" value={String(data.goal || "待补充")} />
       <Definition label="验收条件" value={String(data.acceptance_criteria || "待补充")} />
       <Definition label="允许修改" value={Array.isArray(data.allowed_paths) ? data.allowed_paths.join("、") : "—"} />
-      <Definition label="后续补充" value={data.followup_mode === "within_scope" ? "自动应用范围内补充" : "由开发者确认"} />
+      <Definition label="后续补充" value={data.followup_mode === "within_scope" ? "自动应用范围内补充" : "手动确认后应用"} />
     </div>
     {data.reason ? <p className="text-sm text-muted-foreground">{String(data.reason)}</p> : null}
   </div>;
@@ -117,8 +117,8 @@ export function ApprovalEvidence({ approval }: { approval: Approval }) {
               {label(String(data.stage ?? approval.kind ?? ""))}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              版本 {String(data.revision ?? "—")} · 当前运行{" "}
-              {String(data.epoch ?? "—")}
+              版本 {String(data.revision ?? "—")} · 第{" "}
+              {String(data.epoch ?? "—")} 轮执行
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export function ApprovalEvidence({ approval }: { approval: Approval }) {
         )}
         {typeof data.test_digest === "string" && data.test_digest && (
           <div className="text-xs text-muted-foreground">
-            测试对应的代码校验值{" "}
+            测试代码快照摘要{" "}
             <code className="mt-2 block break-all">{data.test_digest}</code>
           </div>
         )}

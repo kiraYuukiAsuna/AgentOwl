@@ -41,7 +41,7 @@ const labels: Record<string, string> = {
   queued: "排队中",
   running: "运行中",
   paused: "已暂停",
-  blocked: "无法继续",
+  blocked: "已阻塞",
   failed: "失败",
   ignored: "已忽略",
   cancelled: "已取消",
@@ -59,7 +59,7 @@ const labels: Record<string, string> = {
   healthy: "连接正常",
   unverified: "待检查",
   verified: "检查通过",
-  observed: "有成功记录",
+  observed: "已有实测",
   synced: "已同步",
   unavailable: "不可用",
   disconnected: "未连接",
@@ -320,9 +320,9 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (error && typeof error === "object") {
     const e = error as { detail?: string; title?: string; message?: string };
-    return e.detail ?? e.message ?? e.title ?? "操作失败，请重试。";
+    return e.detail ?? e.message ?? e.title ?? "操作失败，请稍后重试。";
   }
-  return "操作失败，请重试。";
+  return "操作失败，请稍后重试。";
 }
 export function reportError(error: unknown) {
   toast.error(errorMessage(error));

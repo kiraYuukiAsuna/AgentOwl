@@ -4,8 +4,8 @@ import { GeistMono } from "geist/font/mono";
 import { Toaster } from "sonner";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: { default: "AgentOwl · 支持工作台", template: "%s · AgentOwl" },
-  description: "问题处理、开发任务与知识库。",
+  title: { default: "AgentOwl · 支持与开发工作台", template: "%s · AgentOwl" },
+  description: "集中处理用户问题、维护知识库与跟进开发任务。",
 };
 export default function RootLayout({
   children,

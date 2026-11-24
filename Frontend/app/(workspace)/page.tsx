@@ -137,9 +137,12 @@ export default function DashboardPage() {
           <Panel
             title="开发进展"
             action={
-              <Link href="/development" className="text-xs text-primary">
-                全部任务 →
-              </Link>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/development">
+                  查看全部
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </Button>
             }
           >
             {data.recentTasks?.length ? (
@@ -158,7 +161,7 @@ export default function DashboardPage() {
                         {t.title || t.goal}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {label(t.stage)} · 第 {t.revision ?? 1} 版
+                        {label(t.stage)} · 版本 {t.revision ?? 1}
                       </p>
                     </div>
                     <Status value={t.status} />
@@ -167,7 +170,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <Empty
-                title="还没有开发任务"
+                title="暂无开发任务"
               />
             )}
           </Panel>

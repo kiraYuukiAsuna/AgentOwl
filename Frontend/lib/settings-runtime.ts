@@ -17,19 +17,19 @@ const maxMiB = 8796093022207;
 
 export const executionFields = [
   { key: "maxConcurrent", label: "同时执行任务数", min: 1, max: 4, group: "运行限制" },
-  { key: "timeoutSeconds", label: "单次最长运行时间（秒）", min: 0, max: 3600, group: "运行限制", hint: "0 为不限。" },
+  { key: "timeoutSeconds", label: "单次最长运行时间（秒）", min: 0, max: 3600, group: "运行限制", hint: "填 0 表示不设超时。" },
   { key: "memoryMb", label: "内存上限（MiB）", min: 64, max: 8192, group: "运行限制", resource: true },
-  { key: "cpuMillis", label: "CPU 上限（毫核）", min: 100, max: 8000, group: "运行限制", resource: true, hint: "1000 毫核 = 1 个 CPU 核。" },
+  { key: "cpuMillis", label: "CPU 上限（毫核）", min: 100, max: 8000, group: "运行限制", resource: true, hint: "1000 毫核 = 1 核 CPU。" },
   { key: "pids", label: "进程数上限（PID）", min: 16, max: 512, group: "运行限制", resource: true },
   { key: "workspaceMb", label: "代码快照大小（MiB）", min: 0, group: "用量上限（0 为不限）" },
   { key: "maxFiles", label: "代码文件数量", min: 0, group: "用量上限（0 为不限）" },
   { key: "artifactMb", label: "执行产物大小（MiB）", min: 0, group: "用量上限（0 为不限）" },
   { key: "maxToolCalls", label: "工具调用次数", min: 0, group: "用量上限（0 为不限）" },
-  { key: "maxTokens", label: "单次模型用量（Token）", min: 0, group: "用量上限（0 为不限）", hint: "0 会预留当天全部剩余额度，结束后按实际用量结算。" },
-  { key: "jobRetryAttempts", label: "后台任务最大尝试次数", min: 1, max: 10, group: "重试策略", hint: "含首次执行。" },
+  { key: "maxTokens", label: "单次模型用量（Token）", min: 0, group: "用量上限（0 为不限）", hint: "填 0 表示不设单次上限，执行前会预占当日剩余总额度，结束后按实际消耗结算。" },
+  { key: "jobRetryAttempts", label: "后台任务最大尝试次数", min: 1, max: 10, group: "重试策略", hint: "包含首次执行。" },
   { key: "jobRetryBaseSeconds", label: "后台任务初始重试间隔（秒）", min: 1, max: 3600, group: "重试策略" },
   { key: "jobRetryMaxSeconds", label: "后台任务最大重试间隔（秒）", min: 1, max: 86400, group: "重试策略" },
-  { key: "externalRetryAttempts", label: "平台发送自动重试次数", min: 0, max: 5, group: "重试策略", hint: "0 为不重试。" },
+  { key: "externalRetryAttempts", label: "平台发送自动重试次数", min: 0, max: 5, group: "重试策略", hint: "填 0 表示不自动重试。" },
   { key: "externalRetryDelaySeconds", label: "平台发送重试间隔（秒）", min: 1, max: 86400, group: "重试策略" },
 ] as const;
 
@@ -142,13 +142,13 @@ const modelSchema = z.object({
       if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || value.baseUrl.includes("?") || value.baseUrl.includes("#"))
         throw new Error("invalid URL");
       if (url.protocol === "http:" && !value.allowHttp)
-        ctx.addIssue({ code: "custom", path: ["baseUrl"], message: "请使用 HTTPS 地址；开发环境使用 HTTP 时需明确允许" });
+        ctx.addIssue({ code: "custom", path: ["baseUrl"], message: "请使用 HTTPS 地址；如需在内网或本地使用 HTTP，请先开启“允许 HTTP 地址”" });
     } catch {
-      ctx.addIssue({ code: "custom", path: ["baseUrl"], message: "请填写有效的 HTTP(S) API 地址，不含账号、密码、查询参数或片段" });
+      ctx.addIssue({ code: "custom", path: ["baseUrl"], message: "请填写有效的 HTTP(S) API 地址，且不要包含账号、密码、查询参数或锚点" });
     }
   }
   if (value.clearApiKey && value.apiKey)
-    ctx.addIssue({ code: "custom", path: ["apiKey"], message: "清除密钥和填写新密钥不能同时选择" });
+    ctx.addIssue({ code: "custom", path: ["apiKey"], message: "不能同时选择“清除已有密钥”并填写新密钥" });
 });
 
 export function modelSettingsPayload(values: ModelFormValues, version: number, existing?: ModelSettings) {
@@ -184,7 +184,7 @@ export function executionRuntimeIssue(runtime?: RunnerCapabilities | null): { me
   if (runtime.settingsConfigured === false || runtime.errorEscaped === "runner settings unavailable")
     return { message: "执行配置未同步，请保存任务执行设置，并检查机器能否访问 API。" };
   if (runtime.resourceLimits === "required" && runtime.supportsResourceLimits === false)
-    return { message: "当前机器不支持资源限制，请检查机器配置。仅可信开发环境可关闭限制。" };
+    return { message: "当前机器不支持资源限制，请检查宿主机 cgroup 配置。仅内部开发环境可关闭限制。" };
   if (runtime.modelConfigured === false || runtime.errorEscaped === "model settings are missing, disabled or invalid")
     return { message: "模型未就绪，请到“模型接口”启用并保存。", modelLink: true };
   if (runtime.errorEscaped || runtime.ready === false)

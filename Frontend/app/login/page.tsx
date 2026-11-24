@@ -93,7 +93,7 @@ function LoginForm() {
                   name="password"
                   type="password"
                   autoComplete="current-password"
-                  placeholder="输入登录密码"
+                  placeholder="请输入密码"
                   required
                   disabled={busy}
                 />
@@ -124,7 +124,7 @@ function LoginForm() {
             </form>
           ) : (
             <ErrorState
-              error={new Error("无法加载登录方式，请重试")}
+              error={new Error("登录方式加载失败，请重试")}
               retry={() => void refreshConfig()}
             />
           )}
@@ -141,7 +141,7 @@ function LoginForm() {
             </div>
           )}
           <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
-            无法登录？请联系管理员。
+            遇到登录问题？请联系团队管理员。
           </p>
         </section>
       </div>

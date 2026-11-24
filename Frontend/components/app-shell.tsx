@@ -196,17 +196,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Dialog.Portal>
         <div className="flex min-w-0 flex-1 flex-col">
           <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-7 outline-none sm:px-6 lg:px-8 lg:py-8">{children}</main>
-          <footer className="mx-4 flex justify-between border-t border-border py-4 text-[11px] text-muted-foreground sm:mx-6 lg:mx-8"><span>AgentOwl</span><span>AgentOwl</span></footer>
+          <footer className="mx-4 flex justify-between border-t border-border py-4 text-[11px] text-muted-foreground sm:mx-6 lg:mx-8"><span>AgentOwl</span><span>支持与开发工作台</span></footer>
         </div>
       </div>
       <Command.Dialog open={commandOpen} onOpenChange={setCommandOpen} label="快速跳转" className="fixed top-[20%] left-1/2 z-[60] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         <div className="flex items-center gap-3 border-b border-border px-4">
           <Search className="size-4 text-muted-foreground" aria-hidden />
-          <Command.Input placeholder="搜索页面…" className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none" />
+          <Command.Input placeholder="输入页面名称快速跳转…" className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none focus:outline-none focus-visible:outline-none" />
           <button onClick={() => setCommandOpen(false)} aria-label="关闭搜索" className="rounded p-1 text-muted-foreground hover:bg-muted"><X className="size-4" /></button>
         </div>
         <Command.List className="max-h-80 overflow-y-auto p-2">
-          <Command.Empty className="p-6 text-center text-sm text-muted-foreground">没有匹配的页面</Command.Empty>
+          <Command.Empty className="p-6 text-center text-sm text-muted-foreground">未找到匹配页面</Command.Empty>
           {[...navigation, ...managementItems, account].map(({ href, title, icon: Icon }) => (
             <Command.Item key={href} onSelect={() => go(href)} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm aria-selected:bg-accent aria-selected:text-accent-foreground"><Icon className="size-4" aria-hidden />{title}</Command.Item>
           ))}

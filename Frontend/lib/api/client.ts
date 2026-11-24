@@ -90,7 +90,7 @@ async function rawMutation(path: string, method: string, body: Record<string, un
   } catch {
     throw new ApiError(
       0,
-      "连接中断，操作结果未知。请保持内容不变后重试。",
+      "网络连接中断，暂无法确认操作是否生效。请勿改动内容，直接重试即可避免重复提交。",
     );
   }
   if (response.ok || response.status < 500) uncertainRequests.delete(fingerprint);
@@ -110,7 +110,7 @@ async function rawMutation(path: string, method: string, body: Record<string, un
     const message = problem.detail || problem.title || `请求失败（${response.status}）`;
     throw new ApiError(
       response.status,
-      response.status === 409 ? `${message}。请刷新后重试。` : message,
+      response.status === 409 ? `${message.replace(/。+$/, "")}。请刷新页面后重试。` : message,
       problem.code,
     );
   }
@@ -152,7 +152,7 @@ function client() {
     } catch {
       throw new ApiError(
         0,
-        "连接中断，操作结果未知。请保持内容不变后重试。",
+        "网络连接中断，暂无法确认操作是否生效。请勿改动内容，直接重试即可避免重复提交。",
       );
     }
     if (fingerprint && (response.ok || response.status < 500))
@@ -179,7 +179,7 @@ function client() {
       throw new ApiError(
         response.status,
         response.status === 409
-          ? `${message}。请刷新后重试。`
+          ? `${message.replace(/。+$/, "")}。请刷新页面后重试。`
           : message,
         problem.code,
       );

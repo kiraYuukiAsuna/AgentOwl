@@ -64,11 +64,11 @@ export default function ProfilePage() {
               <Field label="当前密码">
                 <Input type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} disabled={!localLogin} />
               </Field>
-              <Field label="新密码" hint="12–72 字节，中文占多个字节。">
+              <Field label="新密码" hint="长度需在 12–72 字节之间（单个中文字符占 3 字节）。">
                 <Input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={!localLogin} minLength={12} maxLength={72} />
               </Field>
             </div>
-          </details> : <p className="text-xs text-muted-foreground">密码由团队登录平台管理。</p>}
+          </details> : <p className="text-xs text-muted-foreground">当前使用团队统一登录，请在对应身份平台修改密码。</p>}
           <div className="flex justify-end border-t border-border pt-4">
             <Button type="submit" disabled={busy}>
               {busy && <Loader2 className="size-4 animate-spin" />}保存修改

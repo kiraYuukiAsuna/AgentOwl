@@ -24,7 +24,7 @@ export function CaseAttachments({
       title="消息附件"
     >
       <p className="border-b border-border bg-muted/40 px-5 py-3 text-xs leading-6 text-muted-foreground">
-        原附件可能含敏感信息；单个文件最多下载 4 MiB。
+        下载前请留意附件中的敏感信息，单文件下载上限为 4 MiB。
       </p>
       <div className="divide-y divide-border">
         {items.map((item) => (
@@ -52,7 +52,7 @@ export function CaseAttachments({
                     item.index,
                     version,
                   );
-                  if (!content) throw new Error("无法下载附件，原文件可能已失效");
+                  if (!content) throw new Error("附件下载失败，原消息中的文件可能已过期或被删除");
                   downloadBinary(
                     content,
                     attachmentFilename(item.name, item.index),

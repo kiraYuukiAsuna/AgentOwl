@@ -21,14 +21,14 @@ const choices = [
     action: "unresolved",
     title: "未解决",
     icon: MessageCircle,
-    description: "问题将回到“处理中”。",
+    description: "提交后，问题将重新回到“处理中”状态。",
     success: "已标记为未解决",
   },
   {
     action: "human",
     title: "转人工",
     icon: UserCheck,
-    description: "将暂停自动回复。",
+    description: "提交后将暂停自动回复，交由人工跟进。",
     success: "已转人工",
   },
 ] as const;
@@ -118,7 +118,7 @@ export function CaseFeedback({
                 onChange={(event) => setReason(event.target.value)}
                 required
                 maxLength={2000}
-                placeholder="反馈或转人工原因（请勿填写密码或 Token）"
+                placeholder="补充具体情况或原因（请勿包含密码或 Token）"
               />
             </Field>
             <Button type="submit" disabled={busy !== null || !reason.trim()}>

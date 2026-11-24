@@ -55,7 +55,7 @@ export function ConnectionCapabilities({
               </p>}
               {ids.length > 0 && (
                 <p className="mt-1 break-all text-xs leading-6">
-                  已确认渠道：
+                  已验证渠道：
                   {ids
                     .map((id) => channelNames.get(String(id)) || String(id))
                     .join("、")}

@@ -80,7 +80,7 @@ export function KnowledgeEditor({
         <Input
           name="title"
           defaultValue={value?.title ?? ""}
-          placeholder="Token 失效的处理方法"
+          placeholder="例如：登录后提示 Token 失效的排查方法"
           required
         />
       </Field>
@@ -140,7 +140,7 @@ export function KnowledgeEditor({
           defaultValue={value?.body ?? ""}
           required
           className="min-h-56 font-mono text-[13px]"
-          placeholder="填写正文"
+          placeholder="支持 Markdown，建议包含适用条件、排查步骤和结论"
         />
       </Field>
       <div className="grid grid-cols-2 gap-4">

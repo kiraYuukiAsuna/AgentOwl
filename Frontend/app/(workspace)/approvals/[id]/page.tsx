@@ -49,7 +49,7 @@ export default function ApprovalPage() {
     e.preventDefault();
     if (!item) return;
     if (decision !== "approve" && !reason.trim()) {
-      toast.error("请填写拒绝或撤销的原因");
+      toast.error(decision === "revoke" ? "请填写撤销原因" : "请填写拒绝原因");
       return;
     }
     setBusy(true);
@@ -73,7 +73,7 @@ export default function ApprovalPage() {
   async function regenerate() {
     if (!item?.subjectId) return;
     setBusy(true);
-    try { await runtimeWrite(`/api/v1/admission-decisions/${item.subjectId}/actions`, "POST", { action: "reevaluate" }); toast.success("正在重新生成任务建议"); await mutate(); }
+    try { await runtimeWrite(`/api/v1/admission-decisions/${item.subjectId}/actions`, "POST", { action: "reevaluate" }); toast.success("已提交重新生成，请稍后刷新查看"); await mutate(); }
     catch (error) { reportError(error); }
     finally { setBusy(false); }
   }
@@ -111,7 +111,7 @@ export default function ApprovalPage() {
                   {JSON.stringify(objectData(item.action), null, 2)}
                 </pre>
                 <p className="mt-4 break-all font-mono text-[10px] text-muted-foreground">
-                  内容校验值 · {item.actionHash || "未提供"}
+                  内容摘要（SHA-256）：{item.actionHash || "未提供"}
                 </p>
               </details>
             </div>
@@ -143,7 +143,7 @@ export default function ApprovalPage() {
                       className="text-primary hover:underline"
                       href={target}
                     >
-                      查看 →
+                      查看详情 →
                     </Link>
                   }
                 />
@@ -151,7 +151,7 @@ export default function ApprovalPage() {
             </div>
           </Panel>
           {canApprove && item.kind === "create_task" && ["blocked", "stale", "expired", "rejected"].includes(item.status ?? "") && <Panel title="继续处理"><div className="space-y-3 p-5">
-            {target && <Link className="block text-sm text-primary hover:underline" href={target}>查看问题并补充信息 →</Link>}
+            {target && <Link className="block text-sm text-primary hover:underline" href={target}>前往问题页补充信息 →</Link>}
             <Button disabled={busy} onClick={() => void regenerate()}>重新生成任务建议</Button>
           </div></Panel>}
           {canApprove && item.status === "pending" && (
@@ -198,17 +198,17 @@ export default function ApprovalPage() {
               ? "撤销批准"
               : "拒绝"
         }
-        description={decision === "revoke" ? "仅阻止尚未执行的操作，已发送的消息和 PR 不会撤回。" : item.summary || label(item.kind)}
+        description={decision === "revoke" ? "撤销仅阻止尚未执行的操作；已发出的消息或已提交的 PR 无法撤回。" : item.summary || label(item.kind)}
       >
         <form onSubmit={decide} className="space-y-5">
           <Field
-            label={decision === "approve" ? "审批说明（可选）" : "拒绝或撤销的原因"}
+            label={decision === "approve" ? "审批备注（可选）" : decision === "revoke" ? "撤销原因" : "拒绝原因"}
           >
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               required={decision !== "approve"}
-              placeholder="填写原因或需要调整的内容"
+              placeholder={decision === "approve" ? "可补充审批备注" : decision === "revoke" ? "说明撤销原因" : "说明拒绝原因或需要调整的地方"}
             />
           </Field>
           <div className="flex justify-end gap-2">
@@ -224,7 +224,7 @@ export default function ApprovalPage() {
               type="submit"
               disabled={busy}
             >
-              {busy && <Loader2 className="size-4 animate-spin" />}{decision === "approve" ? "批准并执行" : decision === "revoke" ? "撤销批准" : "拒绝"}
+              {busy && <Loader2 className="size-4 animate-spin" />}{decision === "approve" ? "确认批准" : decision === "revoke" ? "确认撤销" : "确认拒绝"}
             </Button>
           </div>
         </form>

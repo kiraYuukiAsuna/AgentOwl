@@ -94,7 +94,7 @@ function CasesContent() {
                 setSearch(e.target.value);
                 setCursor("");
               }}
-              placeholder="搜索标题、内容或错误码"
+              placeholder="搜索标题、正文或错误码"
               className="pl-9"
               aria-label="搜索问题"
             />
@@ -174,7 +174,7 @@ function CasesContent() {
           <Field label="问题标题">
             <Input
               name="title"
-              placeholder="登录后仍提示 Token 失效"
+              placeholder="例如：登录后调用接口仍提示 Token 失效"
               required
               minLength={3}
             />
@@ -182,7 +182,7 @@ function CasesContent() {
           <Field label="问题描述">
             <Textarea
               name="description"
-              placeholder="问题现象和复现步骤（请勿填写密码或 Token）"
+              placeholder="描述现象、环境及复现步骤（请勿包含密码或 Token）"
               required
               className="min-h-36"
             />
@@ -197,7 +197,7 @@ function CasesContent() {
               </Select>
             </Field>
             <Field label="模块">
-              <Input name="module" placeholder="login / billing / runner" />
+              <Input name="module" placeholder="例如：auth、billing" />
             </Field>
           </div>
           <div className="flex justify-end gap-2 pt-2">
